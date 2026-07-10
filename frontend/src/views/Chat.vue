@@ -134,18 +134,23 @@ const myId = ref(0)
 
 const searchQuery = ref('')
 const searchResults = ref([])
-const recentChats = ref([]) // Lưu danh sách những người đang chat
+const recentChats = ref([]) 
 const activeUser = ref(null)
 const newMessage = ref('')
 const allMessages = ref([]) 
 const messageContainer = ref(null)
 const fileInput = ref(null)
 
-const currentTime = ref(Date.now()) // Đồng hồ trung tâm
+const currentTime = ref(Date.now()) 
 let timerInterval = null
 let ws = null
 
-// Quyết định hiển thị Danh sách tìm kiếm hay Danh sách chat gần đây
+// Hàm trợ thủ xử lý múi giờ: Ép trình duyệt hiểu đây là chuẩn UTC bằng cách thêm chữ 'Z'
+const parseUTCDate = (isoString) => {
+  if (!isoString) return new Date()
+  return new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z')
+}
+
 const displayUsers = computed(() => {
   return searchQuery.value.trim() ? searchResults.value : recentChats.value
 })
@@ -217,7 +222,6 @@ const connectWebSocket = () => {
       allMessages.value.push(data)
     }
     
-    // Nếu có tin nhắn mới từ người lạ, tự động cập nhật lại danh sách recent
     fetchRecentChats()
     scrollToBottom()
   }
@@ -268,14 +272,13 @@ const handleFileUpload = async (event) => {
 }
 
 const formatTime = (isoString) => {
-  const date = new Date(isoString)
+  const date = parseUTCDate(isoString)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-// Logic tính toán "Đồng hồ tử thần" 60 phút
 const getCountdown = (isoString) => {
-  const created = new Date(isoString).getTime()
-  const expire = created + 60 * 60 * 1000 // Hết hạn sau 60 phút
+  const created = parseUTCDate(isoString).getTime()
+  const expire = created + 60 * 60 * 1000 
   const diff = expire - currentTime.value
 
   if (diff <= 0) return 'Đang bốc hơi...'
@@ -300,18 +303,15 @@ onMounted(() => {
   connectWebSocket()
   fetchRecentChats()
   
-  // Vòng lặp đếm ngược mỗi giây và dọn dẹp tin nhắn hết hạn khỏi UI
   timerInterval = setInterval(() => {
     currentTime.value = Date.now()
     
-    // Tự động xóa tin nhắn cũ hơn 60 phút trên màn hình
     const originalLength = allMessages.value.length
     allMessages.value = allMessages.value.filter(msg => {
-      const expire = new Date(msg.created_at).getTime() + 60 * 60 * 1000
+      const expire = parseUTCDate(msg.created_at).getTime() + 60 * 60 * 1000
       return expire > currentTime.value
     })
     
-    // Nếu có tin nhắn bị xóa, cập nhật lại danh sách thanh bên trái
     if (originalLength > allMessages.value.length) {
       fetchRecentChats()
     }
