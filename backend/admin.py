@@ -30,6 +30,19 @@ def delete_user(user_id: int, db: Session = Depends(get_db), _: models.User = De
     db.commit()
     return {"message": f"Đã xóa thành công người dùng: {user.username}"}
 
+# --- API Nâng cấp quyền Admin ---
+@router.put("/users/{user_id}/promote")
+def promote_user(user_id: int, db: Session = Depends(get_db), _: models.User = Depends(check_admin)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User không tồn tại")
+    if user.role == models.RoleEnum.admin:
+        raise HTTPException(status_code=400, detail="User này đã là Admin rồi!")
+    
+    user.role = models.RoleEnum.admin
+    db.commit()
+    return {"message": f"Đã thăng cấp Admin cho: {user.username}"}
+
 # --- API Quản lý Database Mini: Lấy danh sách toàn bộ các Bảng ---
 @router.get("/db/tables")
 def list_db_tables(_: models.User = Depends(check_admin)):
@@ -43,10 +56,7 @@ def get_table_data(table_name: str, db: Session = Depends(get_db), _: models.Use
     if table_name not in inspector.get_table_names():
         raise HTTPException(status_code=404, detail="Bảng dữ liệu không tồn tại trong Database")
     
-    # Lấy danh sách các tên cột của bảng
     columns = [col["name"] for col in inspector.get_columns(table_name)]
-    
-    # Thực thi câu lệnh SQL để lấy tối đa 100 record xem trực quan
     result = db.execute(text(f"SELECT * FROM `{table_name}` LIMIT 100"))
     rows = [dict(zip(columns, row)) for row in result]
     

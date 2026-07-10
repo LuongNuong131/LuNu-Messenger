@@ -1,7 +1,5 @@
-<!-- src/views/Admin.vue -->
 <template>
   <div class="min-h-screen bg-slate-900 text-slate-100 p-6">
-    <!-- Header Admin -->
     <div class="max-w-6xl mx-auto flex justify-between items-center mb-8 bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700">
       <div>
         <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-500">
@@ -14,7 +12,6 @@
       </router-link>
     </div>
 
-    <!-- Thanh chuyển Tab (Users / Database) -->
     <div class="max-w-6xl mx-auto flex gap-4 mb-6">
       <button 
         @click="activeTab = 'users'"
@@ -30,7 +27,6 @@
       </button>
     </div>
 
-    <!-- TAB 1: QUẢN LÝ NGƯỜI DÙNG -->
     <div v-if="activeTab === 'users'" class="max-w-6xl mx-auto bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
       <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
         <h2 class="text-lg font-bold text-white">Danh sách tài khoản hệ thống</h2>
@@ -60,14 +56,21 @@
               </td>
               <td class="px-6 py-4">{{ formatDate(user.created_at) }}</td>
               <td class="px-6 py-4 text-center">
-                <button 
-                  v-if="user.role !== 'admin'" 
-                  @click="deleteUser(user.id, user.username)" 
-                  class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded transition-all text-xs font-bold"
-                >
-                  Xóa User
-                </button>
-                <span v-else class="text-slate-500 text-xs italic">Không thể xóa Admin</span>
+                <template v-if="user.role !== 'admin'">
+                  <button 
+                    @click="promoteUser(user.id, user.username)" 
+                    class="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500 hover:text-white px-3 py-1.5 rounded transition-all text-xs font-bold mr-2"
+                  >
+                    Cấp Admin
+                  </button>
+                  <button 
+                    @click="deleteUser(user.id, user.username)" 
+                    class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded transition-all text-xs font-bold"
+                  >
+                    Xóa User
+                  </button>
+                </template>
+                <span v-else class="text-slate-500 text-xs italic">Quyền lực tối cao</span>
               </td>
             </tr>
           </tbody>
@@ -75,10 +78,7 @@
       </div>
     </div>
 
-    <!-- TAB 2: MINI DATABASE VIEWER -->
     <div v-if="activeTab === 'database'" class="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
-      
-      <!-- Cột trái: Danh sách các bảng -->
       <div class="w-full md:w-1/4 bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden h-fit">
         <div class="p-4 bg-slate-900/50 border-b border-slate-700">
           <h2 class="text-md font-bold text-pink-400">📋 Danh sách Bảng</h2>
@@ -95,7 +95,6 @@
         </div>
       </div>
 
-      <!-- Cột phải: Dữ liệu của bảng được chọn -->
       <div class="w-full md:w-3/4 bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
         <div class="p-4 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center">
           <h2 class="text-md font-bold text-white">
@@ -133,7 +132,6 @@
           <p>Vui lòng chọn một bảng bên trái để xem dữ liệu thô.</p>
         </div>
       </div>
-
     </div>
   </div>
 </template>
@@ -143,40 +141,45 @@ import { ref, onMounted } from 'vue'
 import api from '../services/api'
 
 const activeTab = ref('users')
-
-// State cho Tab Users
 const users = ref([])
-
-// State cho Tab Database
 const tables = ref([])
 const selectedTable = ref(null)
 const tableData = ref({ columns: [], rows: [] })
 
-// --- Logic Tab 1: Users ---
 const fetchUsers = async () => {
   try {
     const res = await api.get('/admin/users')
     users.value = res.data
   } catch (error) {
     console.error("Lỗi lấy danh sách user:", error)
-    alert("Không thể tải danh sách người dùng. Kiểm tra quyền Admin!")
   }
 }
 
 const deleteUser = async (id, username) => {
-  if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" vĩnh viễn không? Toàn bộ tin nhắn của người này cũng sẽ biến mất!`)) {
+  if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" vĩnh viễn không?`)) {
     try {
       await api.delete(`/admin/users/${id}`)
       alert(`Đã xóa thành công user: ${username}`)
-      fetchUsers() // Cập nhật lại list sau khi xóa
+      fetchUsers() 
     } catch (error) {
       console.error("Lỗi xóa user:", error)
-      alert("Xóa thất bại!")
     }
   }
 }
 
-// --- Logic Tab 2: Database Mini ---
+const promoteUser = async (id, username) => {
+  if (confirm(`Bạn có chắc chắn muốn thăng cấp "${username}" làm Admin hệ thống không?`)) {
+    try {
+      await api.put(`/admin/users/${id}/promote`)
+      alert(`Đã thăng cấp thành công cho: ${username}`)
+      fetchUsers() 
+    } catch (error) {
+      console.error("Lỗi cấp quyền:", error)
+      alert("Thăng cấp thất bại!")
+    }
+  }
+}
+
 const fetchTables = async () => {
   try {
     const res = await api.get('/admin/db/tables')
@@ -188,24 +191,21 @@ const fetchTables = async () => {
 
 const fetchTableData = async (tableName) => {
   selectedTable.value = tableName
-  tableData.value = { columns: [], rows: [] } // Reset trước khi nạp data mới
+  tableData.value = { columns: [], rows: [] } 
   try {
     const res = await api.get(`/admin/db/table/${tableName}`)
     tableData.value = res.data
   } catch (error) {
     console.error("Lỗi lấy dữ liệu bảng:", error)
-    alert("Không thể lấy dữ liệu của bảng này!")
   }
 }
 
-// Format ngày tháng cho đẹp
 const formatDate = (isoString) => {
   if (!isoString) return ''
   const date = new Date(isoString)
   return date.toLocaleString('vi-VN')
 }
 
-// Chạy tự động khi vừa vào trang Admin
 onMounted(() => {
   fetchUsers()
   fetchTables()

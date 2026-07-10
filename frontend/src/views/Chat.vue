@@ -22,17 +22,17 @@
           v-model="searchQuery"
           @input="searchUsers"
           type="text"
-          placeholder="Tìm tên bạn bè để chat..."
+          placeholder="Tìm bạn bè hoặc hiển thị chat gần đây..."
           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-pink-500 transition-all text-white"
         />
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-1">
-        <div v-if="searchResults.length === 0" class="text-center text-slate-500 text-xs py-8">
-          Nhập chính xác hoặc một phần tên để tìm người trò chuyện.
+        <div v-if="displayUsers.length === 0" class="text-center text-slate-500 text-xs py-8">
+          {{ searchQuery ? 'Không tìm thấy ai.' : 'Chưa có cuộc trò chuyện nào gần đây.' }}
         </div>
         <button
-          v-for="user in searchResults"
+          v-for="user in displayUsers"
           :key="user.id"
           @click="selectUser(user)"
           :class="['w-full text-left p-3 rounded-lg flex items-center justify-between transition-all', activeUser?.id === user.id ? 'bg-pink-600 text-white' : 'hover:bg-slate-800 bg-slate-800/40']"
@@ -45,12 +45,15 @@
 
     <div class="flex-1 flex flex-col bg-slate-900">
       <template v-if="activeUser">
-        <div class="p-4 border-b border-slate-700 bg-slate-800 flex items-center shadow-md">
-          <span class="text-xl mr-2">👤</span>
-          <div>
-            <h3 class="font-bold text-white text-md">{{ activeUser.username }}</h3>
-            <p class="text-xs text-green-400">Đang trực tuyến (Real-time)</p>
+        <div class="p-4 border-b border-slate-700 bg-slate-800 flex items-center shadow-md justify-between">
+          <div class="flex items-center">
+            <span class="text-xl mr-2">👤</span>
+            <div>
+              <h3 class="font-bold text-white text-md">{{ activeUser.username }}</h3>
+              <p class="text-xs text-green-400">Đang trực tuyến (Real-time)</p>
+            </div>
           </div>
+          <span class="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">Tin nhắn tự hủy sau 60 phút</span>
         </div>
 
         <div ref="messageContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/40">
@@ -62,19 +65,24 @@
             <p v-if="msg.message_type === 'text'" class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
 
             <div v-else-if="msg.message_type === 'image'" class="space-y-1">
-              <img :src="'http://localhost:8000' + msg.file_url" class="max-w-xs max-h-48 rounded-lg object-cover cursor-pointer border border-black/10" alt="Hình ảnh" @click="openImageWindow('http://localhost:8000' + msg.file_url)"/>
-              <a :href="'http://localhost:8000' + msg.file_url" download class="block text-xs underline text-cyan-300 hover:text-white mt-1">📥 Tải ảnh gốc</a>
+              <img :src="apiBaseUrl + msg.file_url" class="max-w-xs max-h-48 rounded-lg object-cover cursor-pointer border border-black/10" alt="Hình ảnh" @click="openImageWindow(apiBaseUrl + msg.file_url)"/>
+              <a :href="apiBaseUrl + msg.file_url" download class="block text-xs underline text-cyan-300 hover:text-white mt-1">📥 Tải ảnh gốc</a>
             </div>
 
             <div v-else-if="msg.message_type === 'file'" class="flex items-center gap-3 bg-black/20 p-2.5 rounded-lg border border-white/10">
               <span class="text-2xl">📁</span>
               <div class="overflow-hidden">
                 <p class="text-xs font-semibold truncate max-w-[180px]">{{ msg.content }}</p>
-                <a :href="'http://localhost:8000' + msg.file_url" download class="text-xs text-cyan-300 underline hover:text-white font-medium">Click để tải xuống máy</a>
+                <a :href="apiBaseUrl + msg.file_url" download class="text-xs text-cyan-300 underline hover:text-white font-medium">Click để tải xuống máy</a>
               </div>
             </div>
 
-            <span class="text-[10px] opacity-50 mt-1 self-end">{{ formatTime(msg.created_at) }}</span>
+            <div class="flex items-center justify-between mt-1.5 gap-4">
+              <span class="text-[10px] opacity-50">{{ formatTime(msg.created_at) }}</span>
+              <span class="text-[10px] font-mono font-bold bg-black/20 px-1.5 py-0.5 rounded text-yellow-300 shadow-inner">
+                {{ getCountdown(msg.created_at) }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -115,24 +123,33 @@ import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../services/api'
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const wsBaseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+
 const router = useRouter()
 
-// Thông tin cá nhân lấy từ localStorage
 const myUsername = ref(localStorage.getItem('username') || '')
 const myRole = ref(localStorage.getItem('user_role') || 'user')
-const myId = ref(0) // Sẽ bổ sung tự động khi nhận tin
+const myId = ref(0) 
 
 const searchQuery = ref('')
 const searchResults = ref([])
+const recentChats = ref([]) // Lưu danh sách những người đang chat
 const activeUser = ref(null)
 const newMessage = ref('')
-const allMessages = ref([]) // Lưu kho chứa tin nhắn real-time tạm thời
+const allMessages = ref([]) 
 const messageContainer = ref(null)
 const fileInput = ref(null)
 
+const currentTime = ref(Date.now()) // Đồng hồ trung tâm
+let timerInterval = null
 let ws = null
 
-// Lọc tin nhắn chỉ hiển thị giữa mình và đối tác chat hiện tại
+// Quyết định hiển thị Danh sách tìm kiếm hay Danh sách chat gần đây
+const displayUsers = computed(() => {
+  return searchQuery.value.trim() ? searchResults.value : recentChats.value
+})
+
 const filteredMessages = computed(() => {
   if (!activeUser.value) return []
   return allMessages.value.filter(msg => 
@@ -141,7 +158,6 @@ const filteredMessages = computed(() => {
   )
 })
 
-// Tự động cuộn xuống đáy khi có tin nhắn mới
 const scrollToBottom = async () => {
   await nextTick()
   if (messageContainer.value) {
@@ -149,7 +165,15 @@ const scrollToBottom = async () => {
   }
 }
 
-// Hàm Tìm kiếm User ẩn danh bạ
+const fetchRecentChats = async () => {
+  try {
+    const res = await api.get('/chat/recent')
+    recentChats.value = res.data
+  } catch (err) {
+    console.error('Lỗi lấy danh sách chat gần đây:', err)
+  }
+}
+
 const searchUsers = async () => {
   if (!searchQuery.value.trim()) {
     searchResults.value = []
@@ -163,21 +187,16 @@ const searchUsers = async () => {
   }
 }
 
-// Khi click vào một user để chat
 const selectUser = async (user) => {
   activeUser.value = user
   try {
-    // 1. Lấy lịch sử chat trong quá khứ (Tối đa 60 phút đổ lại, cũ hơn backend tự xóa)
     const res = await api.get(`/chat/history/${user.id}`)
     
-    // Cập nhật lại danh sách tin nhắn hiện hữu
-    // Định vị ID của bản thân dựa trên lịch sử tin nhắn cũ (nếu có)
     if (res.data.length > 0) {
       const sampleMsg = res.data[0]
       myId.value = sampleMsg.sender_id === user.id ? sampleMsg.receiver_id : sampleMsg.sender_id
     }
     
-    // Nạp tin nhắn vào store hiển thị
     allMessages.value = res.data
     scrollToBottom()
   } catch (err) {
@@ -185,39 +204,29 @@ const selectUser = async (user) => {
   }
 }
 
-// Kết nối cổng WebSocket Real-time
 const connectWebSocket = () => {
   const token = localStorage.getItem('access_token')
   if (!token) return
 
-  ws = new WebSocket(`ws://localhost:8000/chat/ws?token=${token}`)
+  ws = new WebSocket(`${wsBaseUrl}/chat/ws?token=${token}`)
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
     
-    // Cập nhật ID của mình nếu chưa có dữ liệu cấu hình
-    if (myId.value === 0) {
-      if (data.sender_id && data.content && data.sender_id !== activeUser.value?.id) {
-         // Nhận dạng ID linh hoạt
-      }
-    }
-
-    // Thêm tin nhắn mới nhận được vào mảng
-    // Kiểm tra trùng lặp ID tin nhắn trước khi đẩy
     if (!allMessages.value.some(m => m.id === data.id)) {
       allMessages.value.push(data)
     }
     
+    // Nếu có tin nhắn mới từ người lạ, tự động cập nhật lại danh sách recent
+    fetchRecentChats()
     scrollToBottom()
   }
 
   ws.onclose = () => {
-    console.log('Cổng WebSocket bị đóng, đang thử kết nối lại...')
-    setTimeout(connectWebSocket, 3000) // Tự động kết nối lại sau 3s nếu đứt mạng
+    setTimeout(connectWebSocket, 3000) 
   }
 }
 
-// Gửi tin nhắn Text thường chữ thường
 const sendTextMessage = () => {
   if (!newMessage.value.trim() || !activeUser.value || !ws) return
 
@@ -232,7 +241,6 @@ const sendTextMessage = () => {
   newMessage.value = ''
 }
 
-// Xử lý Upload file đính kèm hoặc hình ảnh ảnh
 const handleFileUpload = async (event) => {
   const file = event.target.files[0]
   if (!file || !activeUser.value || !ws) return
@@ -241,56 +249,82 @@ const handleFileUpload = async (event) => {
   formData.append('file', file)
 
   try {
-    // 1. Đẩy file lên server lưu trữ cục bộ
     const res = await api.post('/api/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // 2. Lấy link server trả về, đóng gói bắn tiếp qua WebSocket để đối phương nhận dạng lập tức
     const payload = {
       receiver_id: activeUser.value.id,
-      content: res.data.filename, // Gửi kèm tên file gốc để hiển thị nút download cho đẹp
+      content: res.data.filename, 
       message_type: res.data.message_type,
       file_url: res.data.file_url
     }
 
     ws.send(JSON.stringify(payload))
-    fileInput.value.value = '' // Reset input file
+    fileInput.value.value = '' 
   } catch (err) {
     alert('Lỗi tải tệp tin lên máy chủ!')
-    console.error(err)
   }
 }
 
-// Định dạng thời gian hiển thị gọn gàng
 const formatTime = (isoString) => {
   const date = new Date(isoString)
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-// Mở tab mới xem ảnh phóng to full HD
+// Logic tính toán "Đồng hồ tử thần" 60 phút
+const getCountdown = (isoString) => {
+  const created = new Date(isoString).getTime()
+  const expire = created + 60 * 60 * 1000 // Hết hạn sau 60 phút
+  const diff = expire - currentTime.value
+
+  if (diff <= 0) return 'Đang bốc hơi...'
+
+  const mins = Math.floor(diff / 60000)
+  const secs = Math.floor((diff % 60000) / 1000)
+  return `⏳ ${mins}p ${secs}s`
+}
+
 const openImageWindow = (url) => {
   window.open(url, '_blank')
 }
 
-// Đăng xuất xóa bộ nhớ
 const handleLogout = () => {
   if (ws) ws.close()
+  if (timerInterval) clearInterval(timerInterval)
   localStorage.clear()
   router.push('/login')
 }
 
 onMounted(() => {
   connectWebSocket()
+  fetchRecentChats()
+  
+  // Vòng lặp đếm ngược mỗi giây và dọn dẹp tin nhắn hết hạn khỏi UI
+  timerInterval = setInterval(() => {
+    currentTime.value = Date.now()
+    
+    // Tự động xóa tin nhắn cũ hơn 60 phút trên màn hình
+    const originalLength = allMessages.value.length
+    allMessages.value = allMessages.value.filter(msg => {
+      const expire = new Date(msg.created_at).getTime() + 60 * 60 * 1000
+      return expire > currentTime.value
+    })
+    
+    // Nếu có tin nhắn bị xóa, cập nhật lại danh sách thanh bên trái
+    if (originalLength > allMessages.value.length) {
+      fetchRecentChats()
+    }
+  }, 1000)
 })
 
 onUnmounted(() => {
   if (ws) ws.close()
+  if (timerInterval) clearInterval(timerInterval)
 })
 </script>
 
 <style scoped>
-/* Tùy biến thanh cuộn mượt mà kiểu tối giản cho các khu vực Chat */
 ::-webkit-scrollbar {
   width: 5px;
 }
