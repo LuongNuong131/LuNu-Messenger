@@ -1,21 +1,35 @@
 <template>
-  <div class="flex h-screen bg-[#040b16] text-[#eaf6ff] overflow-hidden">
+  <div class="flex h-[100dvh] bg-[#040b16] text-[#eaf6ff] overflow-hidden">
 
     <!-- Sidebar -->
-    <div class="w-80 bg-[#081527] border-r border-[#1f3a5c] flex flex-col shrink-0">
+    <div
+      :class="[
+        'w-full sm:w-80 bg-[#081527] border-r border-[#1f3a5c] flex-col shrink-0',
+        activeUser ? 'hidden sm:flex' : 'flex'
+      ]"
+    >
       <div class="p-4 border-b border-[#1f3a5c] flex justify-between items-center bg-[#0d1f38]">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-lg shrink-0 shadow-lg shadow-cyan-500/20">
-            🌊
+        <div class="flex items-center gap-3 min-w-0">
+          <div
+            class="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-lg shadow-cyan-500/20"
+            :style="{ background: avatarColor(myUsername) }"
+          >
+            {{ initial(myUsername) }}
           </div>
-          <div>
-            <h2 class="font-display font-bold text-base text-[#eaf6ff] leading-tight">{{ myUsername }}</h2>
-            <span class="text-[11px] text-[#7d97b8] capitalize">Quyền: {{ myRole }}</span>
+          <div class="min-w-0">
+            <h2 class="font-display font-bold text-base text-[#eaf6ff] leading-tight truncate">{{ myUsername }}</h2>
+            <span class="text-[11px] text-[#7d97b8] capitalize flex items-center gap-1.5">
+              <span
+                class="w-1.5 h-1.5 rounded-full shrink-0"
+                :class="wsConnected ? 'bg-[#5eead4]' : 'bg-[#fb7185]'"
+              ></span>
+              {{ wsConnected ? 'Đang bắt sóng' : 'Mất kết nối, đang thử lại...' }}
+            </span>
           </div>
         </div>
-        <div class="flex gap-2">
-          <router-link v-if="myRole === 'admin'" to="/admin" class="bg-[#14304f] hover:bg-[#1f3a5c] text-cyan-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors border border-[#1f3a5c]">
-            🔧 Admin
+        <div class="flex gap-2 shrink-0">
+          <router-link v-if="myRole === 'admin'" to="/admin" class="bg-[#14304f] hover:bg-[#1f3a5c] text-cyan-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors border border-[#1f3a5c]" title="Trang quản trị">
+            🔧
           </router-link>
           <button @click="handleLogout" class="bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors border border-rose-500/20">
             Thoát
@@ -37,8 +51,8 @@
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-1">
-        <div v-if="displayUsers.length === 0" class="text-center text-[#4a6180] text-xs py-10">
-          {{ searchQuery ? 'Không tìm thấy ai trên sóng.' : 'Chưa có cuộc trò chuyện nào gần đây.' }}
+        <div v-if="displayUsers.length === 0" class="text-center text-[#4a6180] text-xs py-10 px-6">
+          {{ searchQuery ? 'Không tìm thấy ai trên sóng.' : 'Chưa có cuộc trò chuyện nào gần đây. Thử tìm một người bạn ở ô trên nhé.' }}
         </div>
         <button
           v-for="user in displayUsers"
@@ -68,88 +82,192 @@
     </div>
 
     <!-- Main chat panel -->
-    <div class="flex-1 flex flex-col bg-[#040b16]">
+    <div
+      :class="['flex-1 flex-col bg-[#040b16] relative', activeUser ? 'flex' : 'hidden sm:flex']"
+      @dragover.prevent="isDragging = true"
+      @dragenter.prevent="isDragging = true"
+      @dragleave.prevent="onDragLeave"
+      @drop.prevent="onDrop"
+    >
       <template v-if="activeUser">
-        <div class="p-4 border-b border-[#1f3a5c] bg-[#0d1f38] flex items-center shadow-md justify-between shrink-0">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-[#14304f] flex items-center justify-center text-lg border border-[#1f3a5c]">👤</div>
-            <div>
-              <h3 class="font-display font-bold text-[#eaf6ff] text-sm">{{ activeUser.username }}</h3>
+        <div class="p-3 sm:p-4 border-b border-[#1f3a5c] bg-[#0d1f38] flex items-center shadow-md justify-between shrink-0 gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <button @click="activeUser = null" class="sm:hidden p-1.5 -ml-1 rounded-lg hover:bg-[#14304f] text-[#7d97b8] shrink-0" title="Quay lại danh sách">
+              ←
+            </button>
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+              :style="{ background: avatarColor(activeUser.username) }"
+            >
+              {{ initial(activeUser.username) }}
+            </div>
+            <div class="min-w-0">
+              <h3 class="font-display font-bold text-[#eaf6ff] text-sm truncate">{{ activeUser.username }}</h3>
               <p class="text-xs text-[#5eead4] flex items-center gap-2">
                 <span class="sonar"></span>
                 Đang bắt sóng (real-time)
               </p>
             </div>
           </div>
-          <span class="text-[11px] text-[#7d97b8] bg-[#081527] px-3 py-1.5 rounded-full border border-[#1f3a5c]">
+          <span class="hidden md:inline-flex text-[11px] text-[#7d97b8] bg-[#081527] px-3 py-1.5 rounded-full border border-[#1f3a5c] shrink-0">
             ⏳ Tin nhắn tự hủy sau 60 phút
           </span>
         </div>
 
-        <div ref="messageContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-[#040b16]">
-          <div
-            v-for="msg in filteredMessages"
-            :key="msg.id"
-            :class="[
-              'flex flex-col max-w-[70%] rounded-2xl p-3 shadow-md relative group',
-              msg.sender_id === myId
-                ? 'ml-auto bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-tr-sm'
-                : 'mr-auto bg-[#0d1f38] text-[#eaf6ff] border border-[#1f3a5c] rounded-tl-sm'
-            ]"
-          >
-            <p v-if="msg.message_type === 'text'" class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+        <div
+          ref="messageContainer"
+          @scroll="onScroll"
+          class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 bg-[#040b16] scroll-smooth"
+        >
+          <div v-if="historyLoading" class="flex items-center justify-center gap-2 text-[#7d97b8] py-16 text-sm">
+            <span class="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></span>
+            Đang tải lịch sử trò chuyện...
+          </div>
 
-            <div v-else-if="msg.message_type === 'image'" class="space-y-1">
-              <img :src="apiBaseUrl + msg.file_url" class="max-w-xs max-h-48 rounded-lg object-cover cursor-pointer border border-black/10" alt="Hình ảnh" @click="openImageWindow(apiBaseUrl + msg.file_url)"/>
-              <a :href="apiBaseUrl + msg.file_url" download class="block text-xs underline text-cyan-200 hover:text-white mt-1">📥 Tải ảnh gốc</a>
-            </div>
+          <div v-else-if="filteredMessages.length === 0" class="flex flex-col items-center justify-center text-[#4a6180] py-16 text-center gap-2">
+            <span class="text-4xl">💬</span>
+            <p class="text-sm">Chưa có tin nhắn nào. Hãy là người bắt sóng đầu tiên!</p>
+          </div>
 
-            <div v-else-if="msg.message_type === 'file'" class="flex items-center gap-3 bg-black/20 p-2.5 rounded-lg border border-white/10">
-              <span class="text-2xl">📁</span>
-              <div class="overflow-hidden">
-                <p class="text-xs font-semibold truncate max-w-[180px]">{{ msg.content }}</p>
-                <a :href="apiBaseUrl + msg.file_url" download class="text-xs text-cyan-200 underline hover:text-white font-medium">Click để tải xuống máy</a>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between mt-1.5 gap-4">
-              <span class="text-[10px] opacity-60">{{ formatTime(msg.created_at) }}</span>
-              <span class="text-[10px] font-mono font-bold bg-black/25 px-1.5 py-0.5 rounded text-amber-300 shadow-inner">
-                {{ getCountdown(msg.created_at) }}
+          <template v-for="(group, gIdx) in groupedMessages" :key="gIdx">
+            <div class="flex justify-center my-3 sticky top-0 z-10">
+              <span class="text-[10px] font-semibold text-[#7d97b8] bg-[#0d1f38]/90 backdrop-blur px-3 py-1 rounded-full border border-[#1f3a5c]">
+                {{ group.label }}
               </span>
             </div>
-          </div>
+
+            <div
+              v-for="msg in group.items"
+              :key="msg.id"
+              :class="[
+                'flex flex-col max-w-[85%] sm:max-w-[70%] rounded-2xl p-3 shadow-md relative group mb-2',
+                msg.sender_id === myId
+                  ? 'ml-auto bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-tr-sm'
+                  : 'mr-auto bg-[#0d1f38] text-[#eaf6ff] border border-[#1f3a5c] rounded-tl-sm'
+              ]"
+            >
+              <p v-if="msg.message_type === 'text'" class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+
+              <div v-else-if="msg.message_type === 'image'" class="space-y-1">
+                <img
+                  :src="apiBaseUrl + msg.file_url"
+                  class="max-w-[220px] sm:max-w-xs max-h-56 rounded-lg object-cover cursor-zoom-in border border-black/10"
+                  alt="Hình ảnh"
+                  loading="lazy"
+                  @click="openLightbox(apiBaseUrl + msg.file_url)"
+                />
+                <a :href="apiBaseUrl + msg.file_url" download class="block text-xs underline text-cyan-200 hover:text-white mt-1">📥 Tải ảnh gốc</a>
+              </div>
+
+              <div v-else-if="msg.message_type === 'file'" class="flex items-center gap-3 bg-black/20 p-2.5 rounded-lg border border-white/10 min-w-[180px]">
+                <span class="text-2xl shrink-0">📁</span>
+                <div class="overflow-hidden">
+                  <p class="text-xs font-semibold truncate max-w-[180px]">{{ msg.content }}</p>
+                  <a :href="apiBaseUrl + msg.file_url" download class="text-xs text-cyan-200 underline hover:text-white font-medium">Click để tải xuống máy</a>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between mt-1.5 gap-4">
+                <span class="text-[10px] opacity-60">{{ formatTime(msg.created_at) }}</span>
+                <span class="text-[10px] font-mono font-bold bg-black/25 px-1.5 py-0.5 rounded text-amber-300 shadow-inner shrink-0">
+                  {{ getCountdown(msg.created_at) }}
+                </span>
+              </div>
+            </div>
+          </template>
         </div>
 
-        <div class="p-4 border-t border-[#1f3a5c] bg-[#0d1f38]/80 backdrop-blur flex items-center gap-3 shrink-0">
-          <button @click="$refs.fileInput.click()" class="bg-[#14304f] hover:bg-[#1f3a5c] text-lg text-cyan-200 p-2.5 rounded-lg transition-colors border border-[#1f3a5c]" title="Gửi File hoặc Hình ảnh">
+        <!-- Nút cuộn xuống cuối -->
+        <transition name="fade-up">
+          <button
+            v-if="showScrollBtn"
+            @click="scrollToBottom(true)"
+            class="absolute right-4 sm:right-6 bottom-24 bg-[#14304f] hover:bg-[#1f3a5c] border border-cyan-400/30 text-cyan-200 w-10 h-10 rounded-full shadow-lg shadow-black/30 flex items-center justify-center transition-colors"
+            title="Cuộn xuống tin nhắn mới nhất"
+          >
+            ↓
+          </button>
+        </transition>
+
+        <!-- Overlay kéo-thả file -->
+        <transition name="fade-up">
+          <div
+            v-if="isDragging"
+            class="absolute inset-0 z-20 bg-[#040b16]/85 backdrop-blur-sm border-2 border-dashed border-cyan-400/60 rounded-xl m-2 flex flex-col items-center justify-center gap-2 pointer-events-none"
+          >
+            <span class="text-4xl">📤</span>
+            <p class="text-cyan-200 font-semibold text-sm">Thả tệp vào đây để gửi</p>
+          </div>
+        </transition>
+
+        <div class="p-3 sm:p-4 border-t border-[#1f3a5c] bg-[#0d1f38]/80 backdrop-blur flex items-end gap-2 sm:gap-3 shrink-0">
+          <button @click="$refs.fileInput.click()" class="bg-[#14304f] hover:bg-[#1f3a5c] text-lg text-cyan-200 p-2.5 rounded-lg transition-colors border border-[#1f3a5c] shrink-0" title="Gửi File hoặc Hình ảnh">
             📎
           </button>
           <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden" />
 
-          <input
+          <textarea
             v-model="newMessage"
-            @keyup.enter="sendTextMessage"
-            type="text"
-            placeholder="Nhập nội dung tin nhắn..."
-            class="flex-1 bg-[#040b16] border border-[#1f3a5c] rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-[#eaf6ff] placeholder-[#4a6180] transition-all"
-          />
+            @keydown.enter.exact.prevent="sendTextMessage"
+            @input="autoGrow"
+            ref="textInput"
+            rows="1"
+            placeholder="Nhập nội dung tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
+            class="flex-1 bg-[#040b16] border border-[#1f3a5c] rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-[#eaf6ff] placeholder-[#4a6180] transition-all resize-none max-h-32 leading-relaxed"
+          ></textarea>
 
-          <button @click="sendTextMessage" class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 font-bold px-5 py-3 rounded-lg shadow-md shadow-cyan-500/20 transition-all text-sm text-white">
+          <button
+            @click="sendTextMessage"
+            :disabled="!newMessage.trim()"
+            class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 font-bold px-4 sm:px-5 py-3 rounded-lg shadow-md shadow-cyan-500/20 transition-all text-sm text-white shrink-0 disabled:opacity-40 disabled:hover:from-blue-600 disabled:hover:to-cyan-500 disabled:cursor-not-allowed"
+          >
             Gửi
           </button>
+        </div>
+
+        <div v-if="uploadProgress !== null" class="absolute left-0 right-0 bottom-0 h-0.5 bg-[#1f3a5c]">
+          <div class="h-full bg-cyan-400 transition-all" :style="{ width: uploadProgress + '%' }"></div>
         </div>
       </template>
 
       <template v-else>
-        <div class="flex-1 flex flex-col items-center justify-center text-[#4a6180] relative overflow-hidden">
+        <div class="flex-1 flex flex-col items-center justify-center text-[#4a6180] relative overflow-hidden px-6">
           <div class="moon-glow w-96 h-96 top-1/4 left-1/2 -translate-x-1/2"></div>
           <span class="text-6xl mb-4 relative z-10">🌊</span>
           <h2 class="font-display text-xl font-bold text-[#7d97b8] relative z-10">LuNu Messenger</h2>
-          <p class="text-sm mt-1 text-[#4a6180] relative z-10">Hãy tìm kiếm một tài khoản ở thanh bên trái để bắt đầu trò chuyện real-time.</p>
+          <p class="text-sm mt-1 text-[#4a6180] relative z-10 text-center max-w-xs">Hãy tìm kiếm một tài khoản ở thanh bên trái để bắt đầu trò chuyện real-time.</p>
         </div>
       </template>
     </div>
+
+    <!-- Lightbox ảnh -->
+    <transition name="fade-up">
+      <div
+        v-if="lightboxUrl"
+        class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+        @click="lightboxUrl = null"
+      >
+        <img :src="lightboxUrl" class="max-w-full max-h-full rounded-lg shadow-2xl" @click.stop />
+        <button @click="lightboxUrl = null" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl backdrop-blur">
+          ✕
+        </button>
+        <a
+          :href="lightboxUrl"
+          download
+          @click.stop
+          class="absolute bottom-4 sm:bottom-6 bg-[#14304f] hover:bg-[#1f3a5c] border border-cyan-400/30 text-cyan-200 px-4 py-2 rounded-lg text-sm font-semibold"
+        >
+          📥 Tải ảnh gốc
+        </a>
+      </div>
+    </transition>
+
+    <!-- Toast lỗi upload -->
+    <transition name="fade-up">
+      <div v-if="uploadError" class="fixed bottom-6 right-6 z-50 bg-rose-950/90 border border-rose-500/30 text-rose-200 px-4 py-3 rounded-xl shadow-lg text-sm max-w-xs">
+        ⚠️ {{ uploadError }}
+      </div>
+    </transition>
 
   </div>
 </template>
@@ -166,20 +284,30 @@ const router = useRouter()
 
 const myUsername = ref(localStorage.getItem('username') || '')
 const myRole = ref(localStorage.getItem('user_role') || 'user')
-const myId = ref(0) 
+const myId = ref(0)
 
 const searchQuery = ref('')
 const searchResults = ref([])
-const recentChats = ref([]) 
+const recentChats = ref([])
 const activeUser = ref(null)
 const newMessage = ref('')
-const allMessages = ref([]) 
+const allMessages = ref([])
 const messageContainer = ref(null)
 const fileInput = ref(null)
+const textInput = ref(null)
 
-const currentTime = ref(Date.now()) 
+const historyLoading = ref(false)
+const wsConnected = ref(false)
+const isDragging = ref(false)
+const showScrollBtn = ref(false)
+const lightboxUrl = ref(null)
+const uploadProgress = ref(null)
+const uploadError = ref('')
+
+const currentTime = ref(Date.now())
 let timerInterval = null
 let ws = null
+let dragCounter = 0
 
 // Hàm trợ thủ xử lý múi giờ: Ép trình duyệt hiểu đây là chuẩn UTC bằng cách thêm chữ 'Z'
 const parseUTCDate = (isoString) => {
@@ -187,23 +315,85 @@ const parseUTCDate = (isoString) => {
   return new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z')
 }
 
+// Bảng màu avatar theo phong cách đại dương, chọn theo hash tên user cho ổn định
+const avatarPalette = [
+  'linear-gradient(135deg,#3b82f6,#22d3ee)',
+  'linear-gradient(135deg,#0891b2,#38bdf8)',
+  'linear-gradient(135deg,#6366f1,#22d3ee)',
+  'linear-gradient(135deg,#0ea5e9,#5eead4)',
+  'linear-gradient(135deg,#2563eb,#67e8f9)'
+]
+const avatarColor = (username) => {
+  if (!username) return avatarPalette[0]
+  let hash = 0
+  for (let i = 0; i < username.length; i++) hash = username.charCodeAt(i) + ((hash << 5) - hash)
+  return avatarPalette[Math.abs(hash) % avatarPalette.length]
+}
+const initial = (username) => username?.charAt(0)?.toUpperCase() || '?'
+
 const displayUsers = computed(() => {
   return searchQuery.value.trim() ? searchResults.value : recentChats.value
 })
 
 const filteredMessages = computed(() => {
   if (!activeUser.value) return []
-  return allMessages.value.filter(msg => 
-    (msg.sender_id === myId.value && msg.receiver_id === activeUser.value.id) ||
-    (msg.sender_id === activeUser.value.id && msg.receiver_id === myId.value)
-  )
+  return allMessages.value
+    .filter(msg =>
+      (msg.sender_id === myId.value && msg.receiver_id === activeUser.value.id) ||
+      (msg.sender_id === activeUser.value.id && msg.receiver_id === myId.value)
+    )
+    .sort((a, b) => parseUTCDate(a.created_at) - parseUTCDate(b.created_at))
 })
 
-const scrollToBottom = async () => {
-  await nextTick()
-  if (messageContainer.value) {
-    messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+// Gộp tin nhắn theo ngày để chèn dòng phân cách "Hôm nay / Hôm qua / dd-mm-yyyy"
+const dateLabel = (date) => {
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+  const sameDay = (a, b) => a.toDateString() === b.toDateString()
+
+  if (sameDay(date, today)) return 'Hôm nay'
+  if (sameDay(date, yesterday)) return 'Hôm qua'
+  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+const groupedMessages = computed(() => {
+  const groups = []
+  for (const msg of filteredMessages.value) {
+    const label = dateLabel(parseUTCDate(msg.created_at))
+    const lastGroup = groups[groups.length - 1]
+    if (lastGroup && lastGroup.label === label) {
+      lastGroup.items.push(msg)
+    } else {
+      groups.push({ label, items: [msg] })
+    }
   }
+  return groups
+})
+
+const isNearBottom = () => {
+  const el = messageContainer.value
+  if (!el) return true
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 120
+}
+
+const onScroll = () => {
+  showScrollBtn.value = !isNearBottom()
+}
+
+const scrollToBottom = async (force = false) => {
+  await nextTick()
+  if (messageContainer.value && (force || isNearBottom())) {
+    messageContainer.value.scrollTop = messageContainer.value.scrollHeight
+    showScrollBtn.value = false
+  }
+}
+
+const autoGrow = () => {
+  const el = textInput.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 128) + 'px'
 }
 
 const fetchRecentChats = async () => {
@@ -230,18 +420,21 @@ const searchUsers = async () => {
 
 const selectUser = async (user) => {
   activeUser.value = user
+  historyLoading.value = true
   try {
     const res = await api.get(`/chat/history/${user.id}`)
-    
+
     if (res.data.length > 0) {
       const sampleMsg = res.data[0]
       myId.value = sampleMsg.sender_id === user.id ? sampleMsg.receiver_id : sampleMsg.sender_id
     }
-    
+
     allMessages.value = res.data
-    scrollToBottom()
+    scrollToBottom(true)
   } catch (err) {
     console.error('Không thể lấy lịch sử chat:', err)
+  } finally {
+    historyLoading.value = false
   }
 }
 
@@ -251,19 +444,28 @@ const connectWebSocket = () => {
 
   ws = new WebSocket(`${wsBaseUrl}/chat/ws?token=${token}`)
 
+  ws.onopen = () => {
+    wsConnected.value = true
+  }
+
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
-    
+
     if (!allMessages.value.some(m => m.id === data.id)) {
       allMessages.value.push(data)
     }
-    
+
     fetchRecentChats()
     scrollToBottom()
   }
 
   ws.onclose = () => {
-    setTimeout(connectWebSocket, 3000) 
+    wsConnected.value = false
+    setTimeout(connectWebSocket, 3000)
+  }
+
+  ws.onerror = () => {
+    wsConnected.value = false
   }
 }
 
@@ -279,32 +481,60 @@ const sendTextMessage = () => {
 
   ws.send(JSON.stringify(payload))
   newMessage.value = ''
+  nextTick(() => autoGrow())
 }
 
-const handleFileUpload = async (event) => {
-  const file = event.target.files[0]
+const uploadFile = async (file) => {
   if (!file || !activeUser.value || !ws) return
 
   const formData = new FormData()
   formData.append('file', file)
+  uploadProgress.value = 0
+  uploadError.value = ''
 
   try {
     const res = await api.post('/api/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (evt) => {
+        if (evt.total) uploadProgress.value = Math.round((evt.loaded / evt.total) * 100)
+      }
     })
 
     const payload = {
       receiver_id: activeUser.value.id,
-      content: res.data.filename, 
+      content: res.data.filename,
       message_type: res.data.message_type,
       file_url: res.data.file_url
     }
 
     ws.send(JSON.stringify(payload))
-    fileInput.value.value = '' 
   } catch (err) {
-    alert('Lỗi tải tệp tin lên máy chủ!')
+    uploadError.value = 'Lỗi tải tệp tin lên máy chủ, thử lại xem sao.'
+    setTimeout(() => (uploadError.value = ''), 4000)
+  } finally {
+    uploadProgress.value = null
   }
+}
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0]
+  await uploadFile(file)
+  fileInput.value.value = ''
+}
+
+const onDragLeave = () => {
+  dragCounter--
+  if (dragCounter <= 0) {
+    isDragging.value = false
+    dragCounter = 0
+  }
+}
+
+const onDrop = async (event) => {
+  isDragging.value = false
+  dragCounter = 0
+  const file = event.dataTransfer?.files?.[0]
+  if (file) await uploadFile(file)
 }
 
 const formatTime = (isoString) => {
@@ -314,7 +544,7 @@ const formatTime = (isoString) => {
 
 const getCountdown = (isoString) => {
   const created = parseUTCDate(isoString).getTime()
-  const expire = created + 60 * 60 * 1000 
+  const expire = created + 60 * 60 * 1000
   const diff = expire - currentTime.value
 
   if (diff <= 0) return 'Đang bốc hơi...'
@@ -324,8 +554,8 @@ const getCountdown = (isoString) => {
   return `⏳ ${mins}p ${secs}s`
 }
 
-const openImageWindow = (url) => {
-  window.open(url, '_blank')
+const openLightbox = (url) => {
+  lightboxUrl.value = url
 }
 
 const handleLogout = () => {
@@ -338,16 +568,18 @@ const handleLogout = () => {
 onMounted(() => {
   connectWebSocket()
   fetchRecentChats()
-  
+
+  window.addEventListener('dragover', (e) => e.preventDefault())
+
   timerInterval = setInterval(() => {
     currentTime.value = Date.now()
-    
+
     const originalLength = allMessages.value.length
     allMessages.value = allMessages.value.filter(msg => {
       const expire = parseUTCDate(msg.created_at).getTime() + 60 * 60 * 1000
       return expire > currentTime.value
     })
-    
+
     if (originalLength > allMessages.value.length) {
       fetchRecentChats()
     }
@@ -373,5 +605,15 @@ onUnmounted(() => {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #22d3ee;
+}
+
+.fade-up-enter-active,
+.fade-up-leave-active {
+  transition: all 0.2s ease;
+}
+.fade-up-enter-from,
+.fade-up-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 </style>
