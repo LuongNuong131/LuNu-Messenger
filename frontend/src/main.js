@@ -1,9 +1,8 @@
 // src/main.js
 import { createApp } from 'vue'
-import './assets/style.css' // File chứa cấu hình TailwindCSS
+import './style.css' // Theme LuNu Ocean + Tailwind v4
 import App from './App.vue'
 import router from './router' // Nạp cấu hình Router định tuyến
-import './assets/style.css'
 
 const app = createApp(App)
 
