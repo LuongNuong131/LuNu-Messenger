@@ -1,57 +1,62 @@
 <template>
-  <div class="flex h-[100dvh] bg-[#040b16] text-[#eaf6ff] overflow-hidden">
+  <div class="relative flex h-[100dvh] bg-[#040b16] text-[#eaf6ff] overflow-hidden">
+
+    <!-- Caustics — tín hiệu ánh sáng xuyên nước, phủ toàn màn hình -->
+    <div class="caustics-layer"></div>
 
     <!-- Sidebar -->
     <div
       :class="[
-        'w-full sm:w-80 bg-[#081527] border-r border-[#1f3a5c] flex-col shrink-0',
+        'relative z-10 w-full sm:w-80 bg-[#081527]/95 backdrop-blur-xl border-r border-[#1f3a5c] flex-col shrink-0',
         activeUser ? 'hidden sm:flex' : 'flex'
       ]"
     >
-      <div class="p-4 border-b border-[#1f3a5c] flex justify-between items-center bg-[#0d1f38]">
+      <div class="hairline-glow relative p-4 border-b border-[#1f3a5c] flex justify-between items-center bg-gradient-to-b from-[#0d1f38] to-[#0a1a2e]">
         <div class="flex items-center gap-3 min-w-0">
-          <div
-            class="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-lg shadow-cyan-500/20"
-            :style="{ background: avatarColor(myUsername) }"
-          >
-            {{ initial(myUsername) }}
+          <div class="relative shrink-0">
+            <div
+              class="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-cyan-500/25 ring-1 ring-white/10"
+              :style="{ background: avatarColor(myUsername) }"
+            >
+              {{ initial(myUsername) }}
+            </div>
+            <span
+              class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0d1f38]"
+              :class="wsConnected ? 'bg-[#5eead4]' : 'bg-[#fb7185]'"
+            ></span>
           </div>
           <div class="min-w-0">
             <h2 class="font-display font-bold text-base text-[#eaf6ff] leading-tight truncate">{{ myUsername }}</h2>
-            <span class="text-[11px] text-[#7d97b8] capitalize flex items-center gap-1.5">
-              <span
-                class="w-1.5 h-1.5 rounded-full shrink-0"
-                :class="wsConnected ? 'bg-[#5eead4]' : 'bg-[#fb7185]'"
-              ></span>
+            <span class="text-[11px] text-[#7d97b8] flex items-center gap-1.5">
               {{ wsConnected ? 'Đang bắt sóng' : 'Mất kết nối, đang thử lại...' }}
             </span>
           </div>
         </div>
         <div class="flex gap-2 shrink-0">
-          <router-link v-if="myRole === 'admin'" to="/admin" class="bg-[#14304f] hover:bg-[#1f3a5c] text-cyan-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors border border-[#1f3a5c]" title="Trang quản trị">
+          <router-link v-if="myRole === 'admin'" to="/admin" class="bg-[#14304f] hover:bg-[#1f3a5c] text-cyan-300 text-xs w-8 h-8 flex items-center justify-center rounded-xl transition-colors border border-[#1f3a5c] hover-lift" title="Trang quản trị">
             🔧
           </router-link>
-          <button @click="handleLogout" class="bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 text-xs px-2.5 py-1.5 rounded-lg transition-colors border border-rose-500/20">
+          <button @click="handleLogout" class="bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 text-xs px-3 h-8 rounded-xl transition-colors border border-rose-500/20 font-medium">
             Thoát
           </button>
         </div>
       </div>
 
-      <div class="p-3 border-b border-[#1f3a5c] bg-[#040b16]">
-        <div class="relative">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a6180] text-sm">🔍</span>
+      <div class="p-3 border-b border-[#1f3a5c] bg-[#040b16]/60">
+        <div class="glow-ring relative rounded-xl">
+          <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#4a6180] text-sm">🔍</span>
           <input
             v-model="searchQuery"
             @input="searchUsers"
             type="text"
-            placeholder="Tìm bạn bè hoặc hiển thị chat gần đây..."
-            class="w-full bg-[#0d1f38] border border-[#1f3a5c] rounded-lg pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all text-[#eaf6ff] placeholder-[#4a6180]"
+            placeholder="Tìm bạn bè hoặc chat gần đây..."
+            class="w-full bg-[#0d1f38] border border-[#1f3a5c] rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-cyan-400/50 transition-all text-[#eaf6ff] placeholder-[#4a6180]"
           />
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-2 space-y-1">
-        <div v-if="displayUsers.length === 0" class="text-center text-[#4a6180] text-xs py-10 px-6">
+      <div class="flex-1 overflow-y-auto p-2.5 space-y-1">
+        <div v-if="displayUsers.length === 0" class="text-center text-[#4a6180] text-xs py-12 px-6 leading-relaxed">
           {{ searchQuery ? 'Không tìm thấy ai trên sóng.' : 'Chưa có cuộc trò chuyện nào gần đây. Thử tìm một người bạn ở ô trên nhé.' }}
         </div>
         <button
@@ -59,20 +64,24 @@
           :key="user.id"
           @click="selectUser(user)"
           :class="[
-            'w-full text-left p-3 rounded-xl flex items-center gap-3 transition-all group',
+            'relative w-full text-left p-2.5 rounded-2xl flex items-center gap-3 transition-all duration-200 group',
             activeUser?.id === user.id
-              ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20'
-              : 'hover:bg-[#14304f] bg-[#0d1f38]/60 text-[#eaf6ff]'
+              ? 'bg-gradient-to-r from-blue-600/90 to-cyan-500/90 text-white shadow-lg shadow-cyan-500/20'
+              : 'hover:bg-[#0d1f38] text-[#eaf6ff]'
           ]"
         >
+          <span
+            v-if="activeUser?.id === user.id"
+            class="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full bg-[#5eead4]"
+          ></span>
           <div
-            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+            class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ring-1 ring-white/10"
             :style="{ background: avatarColor(user.username) }"
           >
             {{ initial(user.username) }}
           </div>
           <div class="min-w-0 flex-1">
-            <p class="font-medium truncate">{{ user.username }}</p>
+            <p class="font-medium truncate text-sm">{{ user.username }}</p>
             <span :class="['text-[10px] capitalize', activeUser?.id === user.id ? 'text-white/70' : 'text-[#7d97b8]']">
               {{ user.role }}
             </span>
@@ -83,20 +92,20 @@
 
     <!-- Main chat panel -->
     <div
-      :class="['flex-1 flex-col bg-[#040b16] relative', activeUser ? 'flex' : 'hidden sm:flex']"
+      :class="['relative z-10 flex-1 flex-col bg-transparent relative', activeUser ? 'flex' : 'hidden sm:flex']"
       @dragover.prevent="isDragging = true"
       @dragenter.prevent="isDragging = true"
       @dragleave.prevent="onDragLeave"
       @drop.prevent="onDrop"
     >
       <template v-if="activeUser">
-        <div class="p-3 sm:p-4 border-b border-[#1f3a5c] bg-[#0d1f38] flex items-center shadow-md justify-between shrink-0 gap-3">
+        <div class="hairline-glow relative p-3 sm:p-4 border-b border-[#1f3a5c] bg-[#0d1f38]/90 backdrop-blur-xl flex items-center justify-between shrink-0 gap-3">
           <div class="flex items-center gap-3 min-w-0">
             <button @click="activeUser = null" class="sm:hidden p-1.5 -ml-1 rounded-lg hover:bg-[#14304f] text-[#7d97b8] shrink-0" title="Quay lại danh sách">
               ←
             </button>
             <div
-              class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+              class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ring-1 ring-white/10"
               :style="{ background: avatarColor(activeUser.username) }"
             >
               {{ initial(activeUser.username) }}
@@ -109,7 +118,7 @@
               </p>
             </div>
           </div>
-          <span class="hidden md:inline-flex text-[11px] text-[#7d97b8] bg-[#081527] px-3 py-1.5 rounded-full border border-[#1f3a5c] shrink-0">
+          <span class="hidden md:inline-flex text-[11px] text-[#7d97b8] bg-[#081527]/80 px-3 py-1.5 rounded-full border border-[#1f3a5c] shrink-0">
             ⏳ Tin nhắn tự hủy sau 60 phút
           </span>
         </div>
@@ -117,21 +126,22 @@
         <div
           ref="messageContainer"
           @scroll="onScroll"
-          class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1 bg-[#040b16] scroll-smooth"
+          class="flex-1 overflow-y-auto p-3 sm:p-5 space-y-1 scroll-smooth"
         >
           <div v-if="historyLoading" class="flex items-center justify-center gap-2 text-[#7d97b8] py-16 text-sm">
             <span class="w-4 h-4 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin"></span>
             Đang tải lịch sử trò chuyện...
           </div>
 
-          <div v-else-if="filteredMessages.length === 0" class="flex flex-col items-center justify-center text-[#4a6180] py-16 text-center gap-2">
-            <span class="text-4xl">💬</span>
-            <p class="text-sm">Chưa có tin nhắn nào. Hãy là người bắt sóng đầu tiên!</p>
+          <div v-else-if="filteredMessages.length === 0" class="relative flex flex-col items-center justify-center text-[#4a6180] py-20 text-center gap-3">
+            <div class="moon-glow w-72 h-72 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+            <span class="relative z-10 text-5xl">💬</span>
+            <p class="relative z-10 text-sm max-w-xs">Chưa có tin nhắn nào. Hãy là người bắt sóng đầu tiên!</p>
           </div>
 
           <template v-for="(group, gIdx) in groupedMessages" :key="gIdx">
-            <div class="flex justify-center my-3 sticky top-0 z-10">
-              <span class="text-[10px] font-semibold text-[#7d97b8] bg-[#0d1f38]/90 backdrop-blur px-3 py-1 rounded-full border border-[#1f3a5c]">
+            <div class="flex justify-center my-4 sticky top-0 z-10">
+              <span class="text-[10px] font-semibold text-[#7d97b8] bg-[#0d1f38]/90 backdrop-blur px-3 py-1 rounded-full border border-[#1f3a5c] shadow-sm">
                 {{ group.label }}
               </span>
             </div>
@@ -140,18 +150,18 @@
               v-for="msg in group.items"
               :key="msg.id"
               :class="[
-                'flex flex-col max-w-[85%] sm:max-w-[70%] rounded-2xl p-3 shadow-md relative group mb-2',
+                'flex flex-col max-w-[85%] sm:max-w-[65%] rounded-3xl p-3.5 shadow-lg relative group mb-2.5',
                 msg.sender_id === myId
-                  ? 'ml-auto bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-tr-sm'
-                  : 'mr-auto bg-[#0d1f38] text-[#eaf6ff] border border-[#1f3a5c] rounded-tl-sm'
+                  ? 'msg-sheen ml-auto bg-gradient-to-br from-blue-600 to-cyan-500 text-white rounded-tr-md shadow-cyan-500/20'
+                  : 'mr-auto bg-[#0d1f38]/95 text-[#eaf6ff] border border-[#1f3a5c] rounded-tl-md shadow-black/20'
               ]"
             >
-              <p v-if="msg.message_type === 'text'" class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
+              <p v-if="msg.message_type === 'text'" class="text-sm whitespace-pre-wrap break-words leading-relaxed">{{ msg.content }}</p>
 
-              <div v-else-if="msg.message_type === 'image'" class="space-y-1">
+              <div v-else-if="msg.message_type === 'image'" class="space-y-1.5">
                 <img
                   :src="apiBaseUrl + msg.file_url"
-                  class="max-w-[220px] sm:max-w-xs max-h-56 rounded-lg object-cover cursor-zoom-in border border-black/10"
+                  class="max-w-[220px] sm:max-w-xs max-h-56 rounded-xl object-cover cursor-zoom-in border border-black/10"
                   alt="Hình ảnh"
                   loading="lazy"
                   @click="openLightbox(apiBaseUrl + msg.file_url)"
@@ -159,7 +169,7 @@
                 <a :href="apiBaseUrl + msg.file_url" download class="block text-xs underline text-cyan-200 hover:text-white mt-1">📥 Tải ảnh gốc</a>
               </div>
 
-              <div v-else-if="msg.message_type === 'file'" class="flex items-center gap-3 bg-black/20 p-2.5 rounded-lg border border-white/10 min-w-[180px]">
+              <div v-else-if="msg.message_type === 'file'" class="flex items-center gap-3 bg-black/20 p-2.5 rounded-xl border border-white/10 min-w-[180px]">
                 <span class="text-2xl shrink-0">📁</span>
                 <div class="overflow-hidden">
                   <p class="text-xs font-semibold truncate max-w-[180px]">{{ msg.content }}</p>
@@ -169,7 +179,7 @@
 
               <div class="flex items-center justify-between mt-1.5 gap-4">
                 <span class="text-[10px] opacity-60">{{ formatTime(msg.created_at) }}</span>
-                <span class="text-[10px] font-mono font-bold bg-black/25 px-1.5 py-0.5 rounded text-amber-300 shadow-inner shrink-0">
+                <span class="text-[10px] font-mono font-bold bg-black/25 px-1.5 py-0.5 rounded-full text-amber-300 shadow-inner shrink-0">
                   {{ getCountdown(msg.created_at) }}
                 </span>
               </div>
@@ -182,7 +192,7 @@
           <button
             v-if="showScrollBtn"
             @click="scrollToBottom(true)"
-            class="absolute right-4 sm:right-6 bottom-24 bg-[#14304f] hover:bg-[#1f3a5c] border border-cyan-400/30 text-cyan-200 w-10 h-10 rounded-full shadow-lg shadow-black/30 flex items-center justify-center transition-colors"
+            class="absolute right-4 sm:right-6 bottom-24 bg-[#14304f]/90 backdrop-blur hover:bg-[#1f3a5c] border border-cyan-400/30 text-cyan-200 w-10 h-10 rounded-full shadow-lg shadow-black/30 flex items-center justify-center transition-colors hover-lift"
             title="Cuộn xuống tin nhắn mới nhất"
           >
             ↓
@@ -193,40 +203,43 @@
         <transition name="fade-up">
           <div
             v-if="isDragging"
-            class="absolute inset-0 z-20 bg-[#040b16]/85 backdrop-blur-sm border-2 border-dashed border-cyan-400/60 rounded-xl m-2 flex flex-col items-center justify-center gap-2 pointer-events-none"
+            class="absolute inset-0 z-20 bg-[#040b16]/85 backdrop-blur-sm border-2 border-dashed border-cyan-400/60 rounded-2xl m-2 flex flex-col items-center justify-center gap-2 pointer-events-none"
           >
             <span class="text-4xl">📤</span>
             <p class="text-cyan-200 font-semibold text-sm">Thả tệp vào đây để gửi</p>
           </div>
         </transition>
 
-        <div class="p-3 sm:p-4 border-t border-[#1f3a5c] bg-[#0d1f38]/80 backdrop-blur flex items-end gap-2 sm:gap-3 shrink-0">
-          <button @click="$refs.fileInput.click()" class="bg-[#14304f] hover:bg-[#1f3a5c] text-lg text-cyan-200 p-2.5 rounded-lg transition-colors border border-[#1f3a5c] shrink-0" title="Gửi File hoặc Hình ảnh">
+        <div class="p-3 sm:p-4 border-t border-[#1f3a5c] bg-[#0d1f38]/85 backdrop-blur-xl flex items-end gap-2 sm:gap-3 shrink-0">
+          <button @click="$refs.fileInput.click()" class="bg-[#14304f] hover:bg-[#1f3a5c] text-lg text-cyan-200 w-11 h-11 flex items-center justify-center rounded-xl transition-colors border border-[#1f3a5c] shrink-0 hover-lift" title="Gửi File hoặc Hình ảnh">
             📎
           </button>
           <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden" />
 
-          <textarea
-            v-model="newMessage"
-            @keydown.enter.exact.prevent="sendTextMessage"
-            @input="autoGrow"
-            ref="textInput"
-            rows="1"
-            placeholder="Nhập nội dung tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
-            class="flex-1 bg-[#040b16] border border-[#1f3a5c] rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 text-[#eaf6ff] placeholder-[#4a6180] transition-all resize-none max-h-32 leading-relaxed"
-          ></textarea>
+          <div class="glow-ring flex-1 rounded-2xl">
+            <textarea
+              v-model="newMessage"
+              @keydown.enter.exact.prevent="sendTextMessage"
+              @input="autoGrow"
+              ref="textInput"
+              rows="1"
+              placeholder="Nhập nội dung tin nhắn... (Enter để gửi, Shift+Enter xuống dòng)"
+              class="w-full bg-[#040b16] border border-[#1f3a5c] rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-400/50 text-[#eaf6ff] placeholder-[#4a6180] transition-all resize-none max-h-32 leading-relaxed"
+            ></textarea>
+          </div>
 
           <button
             @click="sendTextMessage"
             :disabled="!newMessage.trim()"
-            class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 font-bold px-4 sm:px-5 py-3 rounded-lg shadow-md shadow-cyan-500/20 transition-all text-sm text-white shrink-0 disabled:opacity-40 disabled:hover:from-blue-600 disabled:hover:to-cyan-500 disabled:cursor-not-allowed"
+            class="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 font-bold w-11 h-11 sm:w-auto sm:px-5 rounded-2xl shadow-lg shadow-cyan-500/20 transition-all text-sm text-white shrink-0 disabled:opacity-40 disabled:hover:from-blue-600 disabled:hover:to-cyan-500 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
-            Gửi
+            <span class="hidden sm:inline">Gửi</span>
+            <span aria-hidden="true">➤</span>
           </button>
         </div>
 
         <div v-if="uploadProgress !== null" class="absolute left-0 right-0 bottom-0 h-0.5 bg-[#1f3a5c]">
-          <div class="h-full bg-cyan-400 transition-all" :style="{ width: uploadProgress + '%' }"></div>
+          <div class="h-full bg-gradient-to-r from-cyan-400 to-blue-400 transition-all" :style="{ width: uploadProgress + '%' }"></div>
         </div>
       </template>
 
@@ -247,7 +260,7 @@
         class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
         @click="lightboxUrl = null"
       >
-        <img :src="lightboxUrl" class="max-w-full max-h-full rounded-lg shadow-2xl" @click.stop />
+        <img :src="lightboxUrl" class="max-w-full max-h-full rounded-xl shadow-2xl" @click.stop />
         <button @click="lightboxUrl = null" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl backdrop-blur">
           ✕
         </button>
@@ -255,7 +268,7 @@
           :href="lightboxUrl"
           download
           @click.stop
-          class="absolute bottom-4 sm:bottom-6 bg-[#14304f] hover:bg-[#1f3a5c] border border-cyan-400/30 text-cyan-200 px-4 py-2 rounded-lg text-sm font-semibold"
+          class="absolute bottom-4 sm:bottom-6 bg-[#14304f] hover:bg-[#1f3a5c] border border-cyan-400/30 text-cyan-200 px-4 py-2 rounded-xl text-sm font-semibold"
         >
           📥 Tải ảnh gốc
         </a>
@@ -264,7 +277,7 @@
 
     <!-- Toast lỗi upload -->
     <transition name="fade-up">
-      <div v-if="uploadError" class="fixed bottom-6 right-6 z-50 bg-rose-950/90 border border-rose-500/30 text-rose-200 px-4 py-3 rounded-xl shadow-lg text-sm max-w-xs">
+      <div v-if="uploadError" class="fixed bottom-6 right-6 z-50 bg-rose-950/90 border border-rose-500/30 text-rose-200 px-4 py-3 rounded-2xl shadow-lg text-sm max-w-xs backdrop-blur">
         ⚠️ {{ uploadError }}
       </div>
     </transition>
