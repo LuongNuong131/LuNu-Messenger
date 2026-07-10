@@ -3,6 +3,7 @@ import { createApp } from 'vue'
 import './assets/style.css' // File chứa cấu hình TailwindCSS
 import App from './App.vue'
 import router from './router' // Nạp cấu hình Router định tuyến
+import './assets/style.css'
 
 const app = createApp(App)
 
