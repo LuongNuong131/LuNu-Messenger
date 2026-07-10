@@ -1,34 +1,70 @@
 <template>
-  <div class="auth-wrapper">
-    <div class="auth-card">
-      <div class="auth-header">
-        <div class="logo-icon">💧</div>
-        <h2>Tạo Tài Khoản</h2>
-        <p>Bắt đầu kết nối với mọi người</p>
-      </div>
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+    <div class="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md">
       
-      <form @submit.prevent="handleRegister" class="auth-form">
-        <div class="input-group">
-          <label>Tên đăng nhập</label>
-          <input type="text" v-model="username" placeholder="Chọn tên đăng nhập" required />
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-extrabold text-white mb-2 tracking-wider">LuNu Messenger</h1>
+        <p class="text-white/80">Tạo tài khoản mới hoàn toàn miễn phí</p>
+      </div>
+
+      <form @submit.prevent="handleRegister" class="space-y-5">
+        <div>
+          <label class="block text-white text-sm font-medium mb-2">Tên đăng nhập</label>
+          <input 
+            v-model="username" 
+            type="text" 
+            required
+            class="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all"
+            placeholder="Tên tài khoản viết liền không dấu..."
+          />
         </div>
 
-        <div class="input-group">
-          <label>Email</label>
-          <input type="email" v-model="email" placeholder="Nhập địa chỉ email" required />
+        <div>
+          <label class="block text-white text-sm font-medium mb-2">Mật khẩu</label>
+          <input 
+            v-model="password" 
+            type="password" 
+            required
+            class="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all"
+            placeholder="Nhập mật khẩu an toàn..."
+          />
         </div>
-        
-        <div class="input-group">
-          <label>Mật khẩu</label>
-          <input type="password" v-model="password" placeholder="Tạo mật khẩu mạnh" required />
+
+        <div>
+          <label class="block text-white text-sm font-medium mb-2">Xác nhận mật khẩu</label>
+          <input 
+            v-model="confirmPassword" 
+            type="password" 
+            required
+            class="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all"
+            placeholder="Nhập lại mật khẩu giống phía trên..."
+          />
         </div>
-        
-        <button type="submit" class="btn-primary">Đăng Ký</button>
+
+        <div v-if="errorMsg" class="text-red-300 text-sm font-semibold text-center bg-red-900/40 py-2 rounded">
+          {{ errorMsg }}
+        </div>
+        <div v-if="successMsg" class="text-green-200 text-sm font-semibold text-center bg-green-900/40 py-2 rounded">
+          {{ successMsg }}
+        </div>
+
+        <button 
+          type="submit" 
+          :disabled="isLoading"
+          class="w-full bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+        >
+          <span v-if="!isLoading">Đăng Ký Ngay</span>
+          <span v-else>Đang tạo tài khoản...</span>
+        </button>
       </form>
-      
-      <div class="auth-footer">
-        Đã có tài khoản? <router-link to="/login">Đăng nhập</router-link>
+
+      <div class="mt-6 text-center text-white/80 text-sm">
+        Đã có tài khoản rồi? 
+        <router-link to="/login" class="text-pink-300 hover:text-white font-bold underline transition-colors">
+          Đăng nhập ngay
+        </router-link>
       </div>
+
     </div>
   </div>
 </template>
@@ -36,87 +72,44 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../services/api'
 
 const username = ref('')
-const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
+const errorMsg = ref('')
+const successMsg = ref('')
+const isLoading = ref(false)
 const router = useRouter()
 
-const handleRegister = () => {
-  // LuNu gọi API Register ở đây nhé
-  console.log('Register logic here...', username.value)
-  // router.push('/login')
+const handleRegister = async () => {
+  if (password.value !== confirmPassword.value) {
+    errorMsg.value = 'Mật khẩu xác nhận không khớp cưng ơi!'
+    return
+  }
+
+  isLoading.value = true
+  errorMsg.value = ''
+  successMsg.value = ''
+
+  try {
+    await api.post('/auth/register', {
+      username: username.value,
+      password: password.value
+    })
+
+    successMsg.value = 'Đăng ký thành công! Đang chuyển hướng...'
+    setTimeout(() => {
+      router.push('/login')
+    }, 1500)
+  } catch (error) {
+    if (error.response && error.response.data) {
+      errorMsg.value = error.response.data.detail || 'Đăng ký thất bại.'
+    } else {
+      errorMsg.value = 'Không thể kết nối tới server backend.'
+    }
+  } finally {
+    isLoading.value = false
+  }
 }
 </script>
-
-<style scoped>
-/* CSS tương tự Login, ta có thể dùng chung class */
-.auth-wrapper {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #001f4d 0%, #0052cc 100%);
-  padding: 20px;
-}
-
-.auth-card {
-  background: #ffffff;
-  width: 100%;
-  max-width: 420px;
-  padding: 40px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  animation: slideUp 0.5s ease-out;
-}
-
-.auth-header {
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.logo-icon {
-  font-size: 48px;
-  margin-bottom: 10px;
-}
-
-.auth-header h2 {
-  color: var(--primary-blue);
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-
-.auth-header p {
-  color: var(--text-muted);
-  font-size: 15px;
-}
-
-.input-group {
-  margin-bottom: 20px;
-}
-
-.input-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.auth-footer {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.auth-footer a {
-  color: var(--primary-blue);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-</style>
