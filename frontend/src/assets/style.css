@@ -1,81 +1,216 @@
 /* frontend/src/style.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@500;600;700;800&display=swap');
 
 :root {
-  /* Tông màu Thủy (Xanh dương) */
-  --primary-blue: #0052cc;      /* Xanh đậm: Nút bấm, Header */
-  --primary-hover: #003d99;     /* Xanh đậm hơn: Hover nút */
-  --secondary-blue: #e5efff;    /* Xanh nhạt: Nền tin nhắn, hover list */
-  --accent-blue: #00bfff;       /* Xanh lơ: Các điểm nhấn, viền focus */
-  --bg-color: #f0f4f8;          /* Màu nền ứng dụng: Xám xanh siêu nhạt */
-  
-  /* Màu Text */
-  --text-main: #1a1a1a;
-  --text-muted: #666666;
-  --text-white: #ffffff;
-  
-  /* Đổ bóng (Shadow) & Bo góc (Radius) */
-  --shadow-sm: 0 2px 8px rgba(0, 82, 204, 0.08);
-  --shadow-md: 0 8px 24px rgba(0, 82, 204, 0.12);
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-full: 50px;
+  /* ============================================
+     LuNu Ocean — bảng màu mệnh Thủy
+     Cảm hứng: biển đêm, trăng soi mặt nước, sóng tín hiệu
+     ============================================ */
+
+  /* Nền — càng sâu càng tối, như đáy đại dương */
+  --abyss: #040b16;       /* nền chính, sâu nhất */
+  --depth-900: #081527;   /* panel / sidebar */
+  --depth-800: #0d1f38;   /* thẻ / card / bong bóng chat */
+  --depth-700: #14304f;   /* hover / active */
+  --tide-line: #1f3a5c;   /* viền, đường phân cách */
+
+  /* Điểm nhấn — ánh sáng phản chiếu trên mặt nước */
+  --cyan-glow: #22d3ee;   /* accent chính — sóng/tín hiệu */
+  --azure: #3b82f6;       /* accent phụ — biển sâu */
+  --seafoam: #5eead4;     /* online / thành công */
+  --coral: #fb7185;       /* lỗi / cảnh báo — vẫn mát, không chọi tông */
+  --amber-pearl: #fbbf24; /* điểm nhấn phụ hiếm khi dùng — ánh trăng vàng */
+
+  /* Chữ */
+  --foam: #eaf6ff;        /* chữ sáng trên nền tối */
+  --mist: #7d97b8;        /* chữ phụ / mô tả */
+
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-display: 'Sora', system-ui, sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--abyss);
+  color: var(--foam);
+  -webkit-font-smoothing: antialiased;
   margin: 0;
   padding: 0;
 }
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  -webkit-font-smoothing: antialiased;
+.font-display {
+  font-family: var(--font-display);
 }
 
-/* Base Inputs & Buttons */
+/* ============================================
+   Thanh cuộn — đồng bộ tông biển cho toàn app
+   ============================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--tide-line);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan-glow);
+}
+
+/* ============================================
+   Base inputs & buttons (dùng lại nếu cần ngoài Tailwind)
+   ============================================ */
 input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: var(--radius-md);
-  font-size: 15px;
-  outline: none;
-  transition: all 0.3s ease;
   font-family: inherit;
 }
-
-input:focus {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 4px rgba(0, 191, 255, 0.15);
-}
-
 button {
   cursor: pointer;
   border: none;
   font-family: inherit;
-  transition: all 0.3s ease;
 }
 
-.btn-primary {
-  background-color: var(--primary-blue);
-  color: var(--text-white);
-  padding: 14px 24px;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: 16px;
+/* ============================================
+   Sóng (Wave) — signature element cho Login/Register
+   Hai lớp sóng trôi ngược tốc độ tạo hiệu ứng thủy triều
+   ============================================ */
+.wave-wrap {
+  position: absolute;
+  bottom: 0;
+  left: 0;
   width: 100%;
-  box-shadow: var(--shadow-sm);
+  height: 160px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.btn-primary:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+.wave-track {
+  display: flex;
+  width: 200%;
+  height: 100%;
 }
 
-.btn-primary:active {
-  transform: translateY(1px);
+.wave-track.layer-back {
+  animation: wave-drift 22s linear infinite;
+  opacity: 0.35;
+}
+
+.wave-track.layer-front {
+  animation: wave-drift 14s linear infinite reverse;
+  opacity: 0.6;
+}
+
+.wave-svg {
+  width: 50%;
+  height: 100%;
+  flex-shrink: 0;
+  display: block;
+}
+
+@keyframes wave-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ============================================
+   Bong bóng nước trôi nổi — ambiance nhẹ nhàng
+   ============================================ */
+.bubble {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(34, 211, 238, 0.35), rgba(34, 211, 238, 0.03));
+  animation: float-bubble 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes float-bubble {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-26px) translateX(8px);
+    opacity: 0.75;
+  }
+}
+
+/* ============================================
+   Quầng sáng — trăng soi mặt nước
+   ============================================ */
+.moon-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.35), rgba(59, 130, 246, 0.12) 60%, transparent 75%);
+  animation: glow-pulse 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ============================================
+   Sonar ripple — "bắt sóng" trạng thái online
+   Chơi chữ: sóng nước & sóng tín hiệu
+   ============================================ */
+.sonar {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--seafoam);
+  flex-shrink: 0;
+}
+
+.sonar::before,
+.sonar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--seafoam);
+  animation: sonar-ping 2.4s cubic-bezier(0.4, 0, 0.3, 1) infinite;
+}
+
+.sonar::after {
+  animation-delay: 1.2s;
+}
+
+@keyframes sonar-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(4.5);
+    opacity: 0;
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .wave-track,
+  .bubble,
+  .moon-glow,
+  .sonar::before,
+  .sonar::after {
+    animation: none !important;
+  }
 }
