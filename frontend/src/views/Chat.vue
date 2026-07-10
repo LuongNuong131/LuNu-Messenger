@@ -45,18 +45,24 @@
           :key="user.id"
           @click="selectUser(user)"
           :class="[
-            'w-full text-left p-3 rounded-xl flex items-center justify-between transition-all group',
+            'w-full text-left p-3 rounded-xl flex items-center gap-3 transition-all group',
             activeUser?.id === user.id
               ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-md shadow-cyan-500/20'
               : 'hover:bg-[#14304f] bg-[#0d1f38]/60 text-[#eaf6ff]'
           ]"
         >
-          <span class="font-medium flex items-center gap-2">
-            <span class="text-base">💬</span> {{ user.username }}
-          </span>
-          <span :class="['text-[10px] capitalize', activeUser?.id === user.id ? 'text-white/70' : 'text-[#7d97b8]']">
-            {{ user.role }}
-          </span>
+          <div
+            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+            :style="{ background: avatarColor(user.username) }"
+          >
+            {{ initial(user.username) }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="font-medium truncate">{{ user.username }}</p>
+            <span :class="['text-[10px] capitalize', activeUser?.id === user.id ? 'text-white/70' : 'text-[#7d97b8]']">
+              {{ user.role }}
+            </span>
+          </div>
         </button>
       </div>
     </div>
