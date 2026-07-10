@@ -1,0 +1,15 @@
+# .gitignore
+
+# Bỏ qua thư mục rác của Python
+backend/__pycache__/
+backend/**/*.pyc
+backend/venv/
+
+# Bỏ qua file chứa mật khẩu
+backend/.env
+
+# Bỏ qua các file ảnh/tài liệu người dùng tải lên lúc chat
+backend/uploads/
+
+# Bỏ qua thư viện khổng lồ của Node.js
+frontend/node_modules/
