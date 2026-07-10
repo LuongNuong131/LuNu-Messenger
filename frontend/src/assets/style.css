@@ -1,3 +1,81 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* frontend/src/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Tông màu Thủy (Xanh dương) */
+  --primary-blue: #0052cc;      /* Xanh đậm: Nút bấm, Header */
+  --primary-hover: #003d99;     /* Xanh đậm hơn: Hover nút */
+  --secondary-blue: #e5efff;    /* Xanh nhạt: Nền tin nhắn, hover list */
+  --accent-blue: #00bfff;       /* Xanh lơ: Các điểm nhấn, viền focus */
+  --bg-color: #f0f4f8;          /* Màu nền ứng dụng: Xám xanh siêu nhạt */
+  
+  /* Màu Text */
+  --text-main: #1a1a1a;
+  --text-muted: #666666;
+  --text-white: #ffffff;
+  
+  /* Đổ bóng (Shadow) & Bo góc (Radius) */
+  --shadow-sm: 0 2px 8px rgba(0, 82, 204, 0.08);
+  --shadow-md: 0 8px 24px rgba(0, 82, 204, 0.12);
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 50px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base Inputs & Buttons */
+input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  outline: none;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 4px rgba(0, 191, 255, 0.15);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: var(--primary-blue);
+  color: var(--text-white);
+  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 16px;
+  width: 100%;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}

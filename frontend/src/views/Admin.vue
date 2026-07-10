@@ -1,213 +1,247 @@
 <template>
-  <div class="min-h-screen bg-slate-900 text-slate-100 p-6">
-    <div class="max-w-6xl mx-auto flex justify-between items-center mb-8 bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700">
-      <div>
-        <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-500">
-          ⚙️ Bảng Điều Khiển Quản Trị
-        </h1>
-        <p class="text-sm text-slate-400 mt-1">Quyền lực tối cao dành riêng cho Admin</p>
+  <div class="admin-layout">
+    <!-- Admin Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-logo">
+        <h2>LuNu Admin</h2>
       </div>
-      <router-link to="/" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-all shadow text-sm font-medium">
-        ⬅ Quay lại Chat
-      </router-link>
-    </div>
-
-    <div class="max-w-6xl mx-auto flex gap-4 mb-6">
-      <button 
-        @click="activeTab = 'users'"
-        :class="['px-6 py-2 rounded-lg font-bold transition-all shadow-md', activeTab === 'users' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700']"
-      >
-        👥 Quản lý Người dùng
-      </button>
-      <button 
-        @click="activeTab = 'database'"
-        :class="['px-6 py-2 rounded-lg font-bold transition-all shadow-md', activeTab === 'database' ? 'bg-pink-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700']"
-      >
-        🗄️ Mini Database (DataGrip)
-      </button>
-    </div>
-
-    <div v-if="activeTab === 'users'" class="max-w-6xl mx-auto bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
-      <div class="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-white">Danh sách tài khoản hệ thống</h2>
-        <button @click="fetchUsers" class="text-sm bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded text-white transition-colors">
-          🔄 Làm mới
-        </button>
+      <nav class="admin-nav">
+        <a href="#" class="nav-item active">Quản lý Người dùng</a>
+        <a href="#" class="nav-item">Lịch sử Tin nhắn</a>
+        <a href="#" class="nav-item">Cài đặt Hệ thống</a>
+      </nav>
+      <div class="sidebar-footer">
+        <router-link to="/chat" class="back-link">← Về trang Chat</router-link>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-300">
-          <thead class="bg-slate-900/50 text-slate-400 uppercase font-semibold">
-            <tr>
-              <th class="px-6 py-4">ID</th>
-              <th class="px-6 py-4">Username</th>
-              <th class="px-6 py-4">Quyền (Role)</th>
-              <th class="px-6 py-4">Ngày tạo</th>
-              <th class="px-6 py-4 text-center">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-700">
-            <tr v-for="user in users" :key="user.id" class="hover:bg-slate-750 transition-colors">
-              <td class="px-6 py-4">{{ user.id }}</td>
-              <td class="px-6 py-4 font-bold text-white">{{ user.username }}</td>
-              <td class="px-6 py-4">
-                <span :class="['px-2 py-1 rounded text-xs font-bold uppercase', user.role === 'admin' ? 'bg-pink-900/50 text-pink-400' : 'bg-slate-700 text-slate-300']">
-                  {{ user.role }}
-                </span>
-              </td>
-              <td class="px-6 py-4">{{ formatDate(user.created_at) }}</td>
-              <td class="px-6 py-4 text-center">
-                <template v-if="user.role !== 'admin'">
-                  <button 
-                    @click="promoteUser(user.id, user.username)" 
-                    class="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500 hover:text-white px-3 py-1.5 rounded transition-all text-xs font-bold mr-2"
-                  >
-                    Cấp Admin
-                  </button>
-                  <button 
-                    @click="deleteUser(user.id, user.username)" 
-                    class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded transition-all text-xs font-bold"
-                  >
-                    Xóa User
-                  </button>
-                </template>
-                <span v-else class="text-slate-500 text-xs italic">Quyền lực tối cao</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </aside>
 
-    <div v-if="activeTab === 'database'" class="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
-      <div class="w-full md:w-1/4 bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden h-fit">
-        <div class="p-4 bg-slate-900/50 border-b border-slate-700">
-          <h2 class="text-md font-bold text-pink-400">📋 Danh sách Bảng</h2>
+    <!-- Admin Content -->
+    <main class="admin-main">
+      <header class="admin-header">
+        <h1>Dashboard Thống Kê</h1>
+        <div class="admin-profile">
+          <span>Admin LuNu</span>
         </div>
-        <div class="p-2 space-y-1">
-          <button 
-            v-for="table in tables" 
-            :key="table" 
-            @click="fetchTableData(table)"
-            :class="['w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors', selectedTable === table ? 'bg-pink-600 text-white' : 'hover:bg-slate-700 text-slate-300']"
-          >
-            🗃️ {{ table }}
-          </button>
-        </div>
-      </div>
+      </header>
 
-      <div class="w-full md:w-3/4 bg-slate-800 rounded-xl shadow-xl border border-slate-700 overflow-hidden">
-        <div class="p-4 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center">
-          <h2 class="text-md font-bold text-white">
-            Dữ liệu bảng: <span class="text-pink-400">{{ selectedTable || 'Chưa chọn' }}</span>
-          </h2>
-          <span v-if="tableData.rows.length" class="text-xs text-slate-400">Hiển thị tối đa 100 dòng</span>
+      <div class="admin-content">
+        <div class="card-stats">
+          <div class="stat-card">
+            <h3>Tổng Người Dùng</h3>
+            <p class="stat-num">1,204</p>
+          </div>
+          <div class="stat-card">
+            <h3>Tin nhắn hôm nay</h3>
+            <p class="stat-num">8,432</p>
+          </div>
         </div>
-        
-        <div class="overflow-x-auto p-4" v-if="selectedTable">
-          <table class="w-full text-left text-sm text-slate-300 border-collapse">
-            <thead class="bg-slate-900 text-slate-400">
+
+        <div class="data-table-card">
+          <div class="table-header">
+            <h3>Danh sách Người dùng</h3>
+            <button class="btn-primary" style="width: auto; padding: 8px 16px;">+ Thêm mới</button>
+          </div>
+          <table class="data-table">
+            <thead>
               <tr>
-                <th v-for="col in tableData.columns" :key="col" class="px-4 py-3 border border-slate-700 font-semibold uppercase text-xs">
-                  {{ col }}
-                </th>
+                <th>ID</th>
+                <th>Tên hiển thị</th>
+                <th>Email</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in tableData.rows" :key="index" class="hover:bg-slate-700 transition-colors">
-                <td v-for="col in tableData.columns" :key="col" class="px-4 py-3 border border-slate-700 max-w-[200px] truncate">
-                  {{ row[col] !== null ? row[col] : 'NULL' }}
+              <tr>
+                <td>#1</td>
+                <td>Trung Tình</td>
+                <td>trungtinh@ai.com</td>
+                <td><span class="badge active">Hoạt động</span></td>
+                <td>
+                  <button class="action-btn edit">Sửa</button>
+                  <button class="action-btn delete">Xóa</button>
                 </td>
               </tr>
-              <tr v-if="tableData.rows.length === 0">
-                <td :colspan="tableData.columns.length" class="text-center py-8 text-slate-500 italic">
-                  Bảng này hiện chưa có dữ liệu nào.
-                </td>
-              </tr>
+              <!-- Render dữ liệu thật của LuNu vào đây -->
             </tbody>
           </table>
         </div>
-
-        <div v-else class="flex flex-col items-center justify-center py-20 text-slate-500">
-          <span class="text-5xl mb-3">🗄️</span>
-          <p>Vui lòng chọn một bảng bên trái để xem dữ liệu thô.</p>
-        </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import api from '../services/api'
-
-const activeTab = ref('users')
-const users = ref([])
-const tables = ref([])
-const selectedTable = ref(null)
-const tableData = ref({ columns: [], rows: [] })
-
-const fetchUsers = async () => {
-  try {
-    const res = await api.get('/admin/users')
-    users.value = res.data
-  } catch (error) {
-    console.error("Lỗi lấy danh sách user:", error)
-  }
-}
-
-const deleteUser = async (id, username) => {
-  if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" vĩnh viễn không?`)) {
-    try {
-      await api.delete(`/admin/users/${id}`)
-      alert(`Đã xóa thành công user: ${username}`)
-      fetchUsers() 
-    } catch (error) {
-      console.error("Lỗi xóa user:", error)
-    }
-  }
-}
-
-const promoteUser = async (id, username) => {
-  if (confirm(`Bạn có chắc chắn muốn thăng cấp "${username}" làm Admin hệ thống không?`)) {
-    try {
-      await api.put(`/admin/users/${id}/promote`)
-      alert(`Đã thăng cấp thành công cho: ${username}`)
-      fetchUsers() 
-    } catch (error) {
-      console.error("Lỗi cấp quyền:", error)
-      alert("Thăng cấp thất bại!")
-    }
-  }
-}
-
-const fetchTables = async () => {
-  try {
-    const res = await api.get('/admin/db/tables')
-    tables.value = res.data
-  } catch (error) {
-    console.error("Lỗi lấy danh sách bảng:", error)
-  }
-}
-
-const fetchTableData = async (tableName) => {
-  selectedTable.value = tableName
-  tableData.value = { columns: [], rows: [] } 
-  try {
-    const res = await api.get(`/admin/db/table/${tableName}`)
-    tableData.value = res.data
-  } catch (error) {
-    console.error("Lỗi lấy dữ liệu bảng:", error)
-  }
-}
-
-const formatDate = (isoString) => {
-  if (!isoString) return ''
-  const date = new Date(isoString)
-  return date.toLocaleString('vi-VN')
-}
-
-onMounted(() => {
-  fetchUsers()
-  fetchTables()
-})
+// Nơi LuNu gọi API Fetch dữ liệu Admin
 </script>
+
+<style scoped>
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+}
+
+/* Sidebar */
+.admin-sidebar {
+  width: 280px;
+  background: #001f4d; /* Navy siêu đậm */
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  padding: 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-logo h2 {
+  font-size: 22px;
+  color: var(--accent-blue);
+}
+
+.admin-nav {
+  flex: 1;
+  padding: 20px 0;
+}
+
+.nav-item {
+  display: block;
+  padding: 16px 24px;
+  color: #a0b2c6;
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.3s;
+}
+
+.nav-item:hover, .nav-item.active {
+  background: rgba(0, 191, 255, 0.1);
+  color: white;
+  border-left: 4px solid var(--accent-blue);
+}
+
+.sidebar-footer {
+  padding: 24px;
+}
+
+.back-link {
+  color: #a0b2c6;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.back-link:hover {
+  color: white;
+}
+
+/* Main Content */
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-header {
+  background: white;
+  padding: 20px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.admin-header h1 {
+  font-size: 20px;
+  color: var(--text-main);
+}
+
+.admin-content {
+  padding: 32px;
+}
+
+/* Stats */
+.card-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: white;
+  padding: 24px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  flex: 1;
+  border-left: 4px solid var(--primary-blue);
+}
+
+.stat-card h3 {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.stat-num {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--primary-blue);
+}
+
+/* Table */
+.data-table-card {
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+  padding: 16px 24px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.data-table th {
+  background: #fafafa;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge.active {
+  background: #e6f7ff;
+  color: var(--primary-blue);
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  font-weight: 600;
+  margin-right: 12px;
+  font-size: 13px;
+}
+
+.action-btn.edit { color: var(--primary-blue); }
+.action-btn.delete { color: #ff4d4f; }
+</style>

@@ -1,54 +1,28 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-    
-    <div class="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl shadow-2xl w-full max-w-md">
-      <div class="text-center mb-8">
-        <h1 class="text-4xl font-extrabold text-white mb-2 tracking-wider">LuNu Messenger</h1>
-        <p class="text-white/80">Đăng nhập để bắt đầu trò chuyện</p>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="logo-icon">🌊</div>
+        <h2>Đăng Nhập</h2>
+        <p>Chào mừng LuNu quay trở lại!</p>
       </div>
-
-      <form @submit.prevent="handleLogin" class="space-y-6">
-        <div>
-          <label class="block text-white text-sm font-medium mb-2">Tên đăng nhập</label>
-          <input 
-            v-model="username" 
-            type="text" 
-            required
-            class="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all"
-            placeholder="Nhập username của bạn..."
-          />
+      
+      <form @submit.prevent="handleLogin" class="auth-form">
+        <div class="input-group">
+          <label>Tên đăng nhập</label>
+          <input type="text" v-model="username" placeholder="Nhập tên đăng nhập" required />
         </div>
-
-        <div>
-          <label class="block text-white text-sm font-medium mb-2">Mật khẩu</label>
-          <input 
-            v-model="password" 
-            type="password" 
-            required
-            class="w-full px-4 py-3 rounded-lg bg-white/20 border border-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-300 transition-all"
-            placeholder="Nhập mật khẩu..."
-          />
+        
+        <div class="input-group">
+          <label>Mật khẩu</label>
+          <input type="password" v-model="password" placeholder="Nhập mật khẩu" required />
         </div>
-
-        <div v-if="errorMsg" class="text-red-300 text-sm font-semibold text-center bg-red-900/40 py-2 rounded">
-          {{ errorMsg }}
-        </div>
-
-        <button 
-          type="submit" 
-          :disabled="isLoading"
-          class="w-full bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-        >
-          <span v-if="!isLoading">Đăng Nhập Ngay</span>
-          <span v-else>Đang xử lý...</span>
-        </button>
+        
+        <button type="submit" class="btn-primary">Vào thôi Cưng</button>
       </form>
-
-      <div class="mt-6 text-center text-white/80 text-sm">
-        Chưa có tài khoản? 
-        <router-link to="/register" class="text-pink-300 hover:text-white font-bold underline transition-colors">
-          Đăng ký tại đây
-        </router-link>
+      
+      <div class="auth-footer">
+        Chưa có tài khoản? <router-link to="/register">Đăng ký ngay</router-link>
       </div>
     </div>
   </div>
@@ -57,52 +31,90 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '../services/api'
 
 const username = ref('')
 const password = ref('')
-const errorMsg = ref('')
-const isLoading = ref(false)
 const router = useRouter()
 
-const handleLogin = async () => {
-  isLoading.value = true
-  errorMsg.value = ''
-  
-  try {
-    // FastAPI (OAuth2PasswordRequestForm) yêu cầu gửi dữ liệu dạng x-www-form-urlencoded
-    const params = new URLSearchParams()
-    params.append('username', username.value)
-    params.append('password', password.value)
-
-    const response = await api.post('/auth/login', params, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    })
-
-    const token = response.data.access_token
-    
-    // Giải mã JWT Payload để lấy Role (Quyền) mà không cần gọi API thêm lần nữa
-    const payloadBase64 = token.split('.')[1]
-    const decodedPayload = JSON.parse(atob(payloadBase64))
-    const userRole = decodedPayload.role
-
-    // Lưu vào LocalStorage
-    localStorage.setItem('access_token', token)
-    localStorage.setItem('user_role', userRole)
-    localStorage.setItem('username', username.value)
-
-    // Chuyển hướng vào trang Chat
-    router.push('/')
-  } catch (error) {
-    if (error.response && error.response.status === 401) {
-      errorMsg.value = 'Sai username hoặc password rồi cưng ơi!'
-    } else {
-      errorMsg.value = 'Có lỗi xảy ra kết nối với máy chủ.'
-    }
-  } finally {
-    isLoading.value = false
-  }
+const handleLogin = () => {
+  // LuNu gọi API Login ở đây nhé
+  console.log('Login logic here...', username.value)
+  // router.push('/chat')
 }
 </script>
+
+<style scoped>
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #001f4d 0%, #0052cc 100%);
+  padding: 20px;
+}
+
+.auth-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  animation: slideUp 0.5s ease-out;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.logo-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.auth-header h2 {
+  color: var(--primary-blue);
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+
+.auth-header p {
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.auth-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.auth-footer a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

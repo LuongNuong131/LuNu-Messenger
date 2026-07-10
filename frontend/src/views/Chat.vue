@@ -1,341 +1,283 @@
 <template>
-  <div class="flex h-screen bg-slate-900 text-slate-100 overflow-hidden">
-    
-    <div class="w-80 bg-slate-850 border-r border-slate-700 flex flex-col">
-      <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
-        <div>
-          <h2 class="font-bold text-lg text-pink-400">👋 {{ myUsername }}</h2>
-          <span class="text-xs text-slate-400 capitalize">Quyền: {{ myRole }}</span>
-        </div>
-        <div class="flex gap-2">
-          <router-link v-if="myRole === 'admin'" to="/admin" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-2 py-1.5 rounded transition-colors">
-            🔧 Admin
-          </router-link>
-          <button @click="handleLogout" class="bg-red-600/80 hover:bg-red-700 text-white text-xs px-2 py-1.5 rounded transition-colors">
-            Thoát
-          </button>
-        </div>
+  <div class="chat-layout">
+    <!-- Sidebar Danh sách bạn bè (Nếu có) -->
+    <aside class="chat-sidebar">
+      <div class="sidebar-header">
+        <h3>LuNu Messenger</h3>
       </div>
-
-      <div class="p-3 border-b border-slate-700 bg-slate-900">
-        <input 
-          v-model="searchQuery"
-          @input="searchUsers"
-          type="text"
-          placeholder="Tìm bạn bè hoặc hiển thị chat gần đây..."
-          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-pink-500 transition-all text-white"
-        />
-      </div>
-
-      <div class="flex-1 overflow-y-auto p-2 space-y-1">
-        <div v-if="displayUsers.length === 0" class="text-center text-slate-500 text-xs py-8">
-          {{ searchQuery ? 'Không tìm thấy ai.' : 'Chưa có cuộc trò chuyện nào gần đây.' }}
-        </div>
-        <button
-          v-for="user in displayUsers"
-          :key="user.id"
-          @click="selectUser(user)"
-          :class="['w-full text-left p-3 rounded-lg flex items-center justify-between transition-all', activeUser?.id === user.id ? 'bg-pink-600 text-white' : 'hover:bg-slate-800 bg-slate-800/40']"
-        >
-          <span class="font-medium">💬 {{ user.username }}</span>
-          <span class="text-xs opacity-60 capitalize">{{ user.role }}</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="flex-1 flex flex-col bg-slate-900">
-      <template v-if="activeUser">
-        <div class="p-4 border-b border-slate-700 bg-slate-800 flex items-center shadow-md justify-between">
-          <div class="flex items-center">
-            <span class="text-xl mr-2">👤</span>
-            <div>
-              <h3 class="font-bold text-white text-md">{{ activeUser.username }}</h3>
-              <p class="text-xs text-green-400">Đang trực tuyến (Real-time)</p>
-            </div>
-          </div>
-          <span class="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">Tin nhắn tự hủy sau 60 phút</span>
-        </div>
-
-        <div ref="messageContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-950/40">
-          <div 
-            v-for="msg in filteredMessages" 
-            :key="msg.id"
-            :class="['flex flex-col max-w-[70%] rounded-2xl p-3 shadow-md relative group', msg.sender_id === myId ? 'ml-auto bg-pink-600 text-white rounded-tr-none' : 'mr-auto bg-slate-800 text-slate-100 rounded-tl-none']"
-          >
-            <p v-if="msg.message_type === 'text'" class="text-sm whitespace-pre-wrap break-words">{{ msg.content }}</p>
-
-            <div v-else-if="msg.message_type === 'image'" class="space-y-1">
-              <img :src="apiBaseUrl + msg.file_url" class="max-w-xs max-h-48 rounded-lg object-cover cursor-pointer border border-black/10" alt="Hình ảnh" @click="openImageWindow(apiBaseUrl + msg.file_url)"/>
-              <a :href="apiBaseUrl + msg.file_url" download class="block text-xs underline text-cyan-300 hover:text-white mt-1">📥 Tải ảnh gốc</a>
-            </div>
-
-            <div v-else-if="msg.message_type === 'file'" class="flex items-center gap-3 bg-black/20 p-2.5 rounded-lg border border-white/10">
-              <span class="text-2xl">📁</span>
-              <div class="overflow-hidden">
-                <p class="text-xs font-semibold truncate max-w-[180px]">{{ msg.content }}</p>
-                <a :href="apiBaseUrl + msg.file_url" download class="text-xs text-cyan-300 underline hover:text-white font-medium">Click để tải xuống máy</a>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between mt-1.5 gap-4">
-              <span class="text-[10px] opacity-50">{{ formatTime(msg.created_at) }}</span>
-              <span class="text-[10px] font-mono font-bold bg-black/20 px-1.5 py-0.5 rounded text-yellow-300 shadow-inner">
-                {{ getCountdown(msg.created_at) }}
-              </span>
-            </div>
+      <div class="contact-list">
+        <!-- Vòng lặp user ở đây -->
+        <div class="contact-item active">
+          <div class="avatar">T</div>
+          <div class="contact-info">
+            <h4>Trung Tình</h4>
+            <p>Tới đi cưng!</p>
           </div>
         </div>
+      </div>
+    </aside>
 
-        <div class="p-4 border-t border-slate-700 bg-slate-800/80 backdrop-blur flex items-center gap-3">
-          <button @click="$refs.fileInput.click()" class="bg-slate-700 hover:bg-slate-600 text-xl text-white p-2.5 rounded-lg transition-colors shadow-inner" title="Gửi File hoặc Hình ảnh">
-            📎
-          </button>
-          <input type="file" ref="fileInput" @change="handleFileUpload" class="hidden" />
+    <!-- Khu vực chat chính -->
+    <main class="chat-main">
+      <header class="chat-header">
+        <div class="current-chat-info">
+          <div class="avatar">T</div>
+          <h2>Trung Tình</h2>
+        </div>
+        <button class="logout-btn" @click="logout">Đăng xuất</button>
+      </header>
 
+      <div class="messages-container" ref="messagesContainer">
+        <!-- Vòng lặp tin nhắn ở đây -->
+        <div class="message received">
+          <div class="msg-bubble">Chào LuNu, hôm nay code mượt chứ?</div>
+        </div>
+        
+        <div class="message sent">
+          <div class="msg-bubble">Ngon lành cành đào luôn Trung Tình ơi! Xanh Thủy đẹp xuất sắc.</div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <form @submit.prevent="sendMessage" class="input-wrapper">
           <input 
-            v-model="newMessage"
-            @keyup.enter="sendTextMessage"
-            type="text"
-            placeholder="Nhập nội dung tin nhắn..."
-            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-pink-500 text-white"
+            type="text" 
+            v-model="newMessage" 
+            placeholder="Nhập tin nhắn..." 
           />
-
-          <button @click="sendTextMessage" class="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 font-bold px-5 py-3 rounded-lg shadow-md transition-all text-sm">
-            Gửi
+          <button type="submit" class="send-btn">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
+            </svg>
           </button>
-        </div>
-      </template>
-
-      <template v-else>
-        <div class="flex-1 flex flex-col items-center justify-center text-slate-500">
-          <span class="text-6xl mb-4">💬</span>
-          <h2 class="text-xl font-bold text-slate-400">LuNu Messenger</h2>
-          <p class="text-sm mt-1 text-slate-500">Hãy tìm kiếm một tài khoản ở thanh bên trái để bắt đầu trò chuyện real-time.</p>
-        </div>
-      </template>
-    </div>
-
+        </form>
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '../services/api'
+import { ref } from 'vue'
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-const wsBaseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
-
-const router = useRouter()
-
-const myUsername = ref(localStorage.getItem('username') || '')
-const myRole = ref(localStorage.getItem('user_role') || 'user')
-const myId = ref(0) 
-
-const searchQuery = ref('')
-const searchResults = ref([])
-const recentChats = ref([]) 
-const activeUser = ref(null)
 const newMessage = ref('')
-const allMessages = ref([]) 
-const messageContainer = ref(null)
-const fileInput = ref(null)
+const messagesContainer = ref(null)
 
-const currentTime = ref(Date.now()) 
-let timerInterval = null
-let ws = null
-
-// Hàm trợ thủ xử lý múi giờ: Ép trình duyệt hiểu đây là chuẩn UTC bằng cách thêm chữ 'Z'
-const parseUTCDate = (isoString) => {
-  if (!isoString) return new Date()
-  return new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z')
-}
-
-const displayUsers = computed(() => {
-  return searchQuery.value.trim() ? searchResults.value : recentChats.value
-})
-
-const filteredMessages = computed(() => {
-  if (!activeUser.value) return []
-  return allMessages.value.filter(msg => 
-    (msg.sender_id === myId.value && msg.receiver_id === activeUser.value.id) ||
-    (msg.sender_id === activeUser.value.id && msg.receiver_id === myId.value)
-  )
-})
-
-const scrollToBottom = async () => {
-  await nextTick()
-  if (messageContainer.value) {
-    messageContainer.value.scrollTop = messageContainer.value.scrollHeight
-  }
-}
-
-const fetchRecentChats = async () => {
-  try {
-    const res = await api.get('/chat/recent')
-    recentChats.value = res.data
-  } catch (err) {
-    console.error('Lỗi lấy danh sách chat gần đây:', err)
-  }
-}
-
-const searchUsers = async () => {
-  if (!searchQuery.value.trim()) {
-    searchResults.value = []
-    return
-  }
-  try {
-    const res = await api.get(`/chat/users/search?keyword=${searchQuery.value}`)
-    searchResults.value = res.data
-  } catch (err) {
-    console.error('Lỗi tìm kiếm user:', err)
-  }
-}
-
-const selectUser = async (user) => {
-  activeUser.value = user
-  try {
-    const res = await api.get(`/chat/history/${user.id}`)
-    
-    if (res.data.length > 0) {
-      const sampleMsg = res.data[0]
-      myId.value = sampleMsg.sender_id === user.id ? sampleMsg.receiver_id : sampleMsg.sender_id
-    }
-    
-    allMessages.value = res.data
-    scrollToBottom()
-  } catch (err) {
-    console.error('Không thể lấy lịch sử chat:', err)
-  }
-}
-
-const connectWebSocket = () => {
-  const token = localStorage.getItem('access_token')
-  if (!token) return
-
-  ws = new WebSocket(`${wsBaseUrl}/chat/ws?token=${token}`)
-
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data)
-    
-    if (!allMessages.value.some(m => m.id === data.id)) {
-      allMessages.value.push(data)
-    }
-    
-    fetchRecentChats()
-    scrollToBottom()
-  }
-
-  ws.onclose = () => {
-    setTimeout(connectWebSocket, 3000) 
-  }
-}
-
-const sendTextMessage = () => {
-  if (!newMessage.value.trim() || !activeUser.value || !ws) return
-
-  const payload = {
-    receiver_id: activeUser.value.id,
-    content: newMessage.value,
-    message_type: 'text',
-    file_url: null
-  }
-
-  ws.send(JSON.stringify(payload))
+const sendMessage = () => {
+  if (!newMessage.value.trim()) return
+  // Logic gửi tin nhắn (WebSocket hoặc API)
+  console.log('Sending:', newMessage.value)
   newMessage.value = ''
+  // Sau khi gửi nhớ scroll xuống cuối nhé
 }
 
-const handleFileUpload = async (event) => {
-  const file = event.target.files[0]
-  if (!file || !activeUser.value || !ws) return
-
-  const formData = new FormData()
-  formData.append('file', file)
-
-  try {
-    const res = await api.post('/api/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-
-    const payload = {
-      receiver_id: activeUser.value.id,
-      content: res.data.filename, 
-      message_type: res.data.message_type,
-      file_url: res.data.file_url
-    }
-
-    ws.send(JSON.stringify(payload))
-    fileInput.value.value = '' 
-  } catch (err) {
-    alert('Lỗi tải tệp tin lên máy chủ!')
-  }
+const logout = () => {
+  console.log('Logging out...')
 }
-
-const formatTime = (isoString) => {
-  const date = parseUTCDate(isoString)
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-const getCountdown = (isoString) => {
-  const created = parseUTCDate(isoString).getTime()
-  const expire = created + 60 * 60 * 1000 
-  const diff = expire - currentTime.value
-
-  if (diff <= 0) return 'Đang bốc hơi...'
-
-  const mins = Math.floor(diff / 60000)
-  const secs = Math.floor((diff % 60000) / 1000)
-  return `⏳ ${mins}p ${secs}s`
-}
-
-const openImageWindow = (url) => {
-  window.open(url, '_blank')
-}
-
-const handleLogout = () => {
-  if (ws) ws.close()
-  if (timerInterval) clearInterval(timerInterval)
-  localStorage.clear()
-  router.push('/login')
-}
-
-onMounted(() => {
-  connectWebSocket()
-  fetchRecentChats()
-  
-  timerInterval = setInterval(() => {
-    currentTime.value = Date.now()
-    
-    const originalLength = allMessages.value.length
-    allMessages.value = allMessages.value.filter(msg => {
-      const expire = parseUTCDate(msg.created_at).getTime() + 60 * 60 * 1000
-      return expire > currentTime.value
-    })
-    
-    if (originalLength > allMessages.value.length) {
-      fetchRecentChats()
-    }
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (ws) ws.close()
-  if (timerInterval) clearInterval(timerInterval)
-})
 </script>
 
 <style scoped>
-::-webkit-scrollbar {
-  width: 5px;
+.chat-layout {
+  display: flex;
+  height: 100vh;
+  background-color: var(--bg-color);
+  overflow: hidden;
 }
-::-webkit-scrollbar-track {
+
+/* Sidebar */
+.chat-sidebar {
+  width: 320px;
+  background: #ffffff;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  background: var(--primary-blue);
+  color: white;
+}
+
+.contact-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-bottom: 5px;
+}
+
+.contact-item:hover {
+  background: var(--secondary-blue);
+}
+
+.contact-item.active {
+  background: var(--secondary-blue);
+  border-left: 4px solid var(--primary-blue);
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  background: var(--primary-blue);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  margin-right: 16px;
+}
+
+.contact-info h4 {
+  font-size: 16px;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.contact-info p {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Main Chat Area */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  padding: 16px 24px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  z-index: 10;
+}
+
+.current-chat-info {
+  display: flex;
+  align-items: center;
+}
+
+.current-chat-info h2 {
+  font-size: 18px;
+}
+
+.logout-btn {
   background: transparent;
+  color: #ff4d4f;
+  font-weight: 600;
 }
-::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 99px;
+
+.messages-container {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #db2777;
+
+/* Chat Bubbles */
+.message {
+  display: flex;
+  max-width: 70%;
+  animation: fadeIn 0.3s ease;
+}
+
+.message.received {
+  align-self: flex-start;
+}
+
+.message.sent {
+  align-self: flex-end;
+}
+
+.msg-bubble {
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.4;
+  box-shadow: var(--shadow-sm);
+}
+
+.message.received .msg-bubble {
+  background: #ffffff;
+  color: var(--text-main);
+  border-radius: 20px 20px 20px 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.message.sent .msg-bubble {
+  background: var(--primary-blue);
+  color: #ffffff;
+  border-radius: 20px 20px 4px 20px;
+}
+
+/* Input Area */
+.chat-input-area {
+  padding: 20px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 12px;
+}
+
+.input-wrapper input {
+  border-radius: var(--radius-full);
+  background: var(--bg-color);
+  border: none;
+  padding: 16px 24px;
+}
+
+.input-wrapper input:focus {
+  background: #ffffff;
+  box-shadow: 0 0 0 2px var(--accent-blue);
+}
+
+.send-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary-blue);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.send-btn svg {
+  width: 24px;
+  height: 24px;
+  margin-left: 4px;
+}
+
+.send-btn:hover {
+  background: var(--primary-hover);
+  transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
